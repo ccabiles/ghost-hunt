@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ghost Hunt</title>
+<style>
+:root{--bg:#0b0a14;--ink:#ece9fa;--mut:#9b95bb;--acc:#ffd25a;--pnl:#1b1832;color-scheme:dark}
+html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
+canvas{position:fixed;inset:0;width:100%;height:100%}
+#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(11,10,20,.92);text-align:center;padding:24px;overflow:auto}
+h1{font-size:clamp(32px,5vw,54px);margin:0;letter-spacing:-.01em}
+p{max-width:540px;margin:0;color:var(--mut);line-height:1.5}
+ol{margin:0;padding:0;list-style-position:inside;columns:2;column-gap:40px;text-align:left}
+button,input{font:inherit;font-size:17px;padding:10px 18px;border-radius:8px;border:2px solid var(--acc);background:var(--pnl);color:var(--ink)}
+button{cursor:pointer}button:hover:not(:disabled),button:focus-visible{background:var(--acc);color:#1a1530;outline:none}
+button:disabled{opacity:.4;cursor:default}
+.row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
+</style></head><body>
+<canvas id="c"></canvas><div id="menu"></div>
+<script>
+const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
+const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. Beam a fainted friend to revive them.<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Everyone takes a turn as the ghost.';
+let grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
+const fog=document.createElement('canvas'),fc=fog.getContext('2d');
+const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
+let me=0,S=null,ph='join',host=0,msg='',scores=[];
+const ws=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host);
+const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
+const angd=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
+function cone(h){const p=[[h.x,h.y]];for(let i=0;i<=36;i++){const a=h.ang-HALF+2*HALF*i/36,cx=Math.cos(a),cy=Math.sin(a);let d=0;while(d<RANGE&&!wall(h.x+cx*d,h.y+cy*d))d+=6;p.push([h.x+cx*d,h.y+cy*d])}return p}
+function buildMap(rows){
+ grid=rows.map(r=>[...r].map(Number));H=grid.length;W=grid[0].length;PW=W*T;PH=H*T;
+ base=document.createElement('canvas');base.width=fog.width=PW;base.height=fog.height=PH;const bc=base.getContext('2d');
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){bc.fillStyle=grid[y][x]?'#38305c':((x+y)%2?'#1a1730':'#1e1a38');bc.fillRect(x*T,y*T,T,T)}
+ bc.fillStyle='#cdbfff';
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(!grid[y][x])continue;
+  const f=(dx,dy)=>{const nx=x+dx,ny=y+dy;return nx>=0&&ny>=0&&nx<W&&ny<H&&!grid[ny][nx]};
+  if(f(0,-1))bc.fillRect(x*T,y*T,T,3);if(f(0,1))bc.fillRect(x*T,y*T+T-3,T,3);
+  if(f(-1,0))bc.fillRect(x*T,y*T,3,T);if(f(1,0))bc.fillRect(x*T+T-3,y*T,3,T)}}
+function menu(){
+ const m=$('menu');if(ph=='play'){m.style.display='none';return}
+ m.style.display='flex';
+ if(!me){m.innerHTML='<h1>Ghost Hunt</h1><p>'+CONTROLS+'</p><div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
+  $('jn').onclick=join;$('nm').onkeydown=e=>{if(e.key=='Enter')join()};return}
+ const list=[...scores].sort((a,b)=>b[2]-a[2]).map(p=>`<li>${esc(p[1])}${p[0]==me?' (you)':''}: ${p[2]}</li>`).join('');
+ m.innerHTML=`<h1>${ph=='over'?esc(msg):'Waiting room'}</h1><p>${CONTROLS}</p><ol>${list}</ol>`+
+  (ph=='lobby'?(host==me?`<button id="go" ${scores.length<2?'disabled':''}>Start the game</button>`:'<p>Waiting for the host to start…</p>'):'<p>The next round starts shortly. The next player becomes the ghost.</p>');
+ if($('go'))$('go').onclick=()=>ws.send('{"t":"start"}')}
+function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
+ws.onmessage=e=>{const m=JSON.parse(e.data);
+ if(m.t=='m')buildMap(m.g);
+ else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
+ else if(m.t=='full')alert('The game is full (15 players).');
+ else if(m.t=='s'){S=m;
+  for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.id=h[0]}
+  if(m.g){if(!DG.vis){DG.x=m.g[0];DG.y=m.g[1]}DG.tx=m.g[0];DG.ty=m.g[1];DG.vis=1}else DG.vis=0}};
+ws.onclose=()=>{$('menu').style.display='flex';$('menu').innerHTML='<h1>Disconnected</h1><p>Reload the page to reconnect.</p>'};
+menu();
+
+addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true;if(me&&(e.key==' '||e.key.startsWith('Arrow')))e.preventDefault()});
+addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false});
+addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false});
+cv.addEventListener('mousemove',e=>{mouse.x=(e.clientX-ox)/sc;mouse.y=(e.clientY-oy)/sc});
+cv.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',()=>mouse.down=false);
+const K=(a,b)=>keys[a]||keys[b];
+setInterval(()=>{if(!me||!S||ph!='play'||ws.readyState!=1)return;
+ const my=D[me]||{x:0,y:0};
+ ws.send(JSON.stringify({t:'in',kx:(K('d','arrowright')?1:0)-(K('a','arrowleft')?1:0),ky:(K('s','arrowdown')?1:0)-(K('w','arrowup')?1:0),
+  ang:Math.atan2(mouse.y-my.y,mouse.x-my.x),on:mouse.down||keys[' '],dash:keys.shift,ch:keys.e}))},33);
+
+function ghostShape(x,y){ctx.fillStyle='#ffd25a';ctx.beginPath();ctx.arc(x,y-3,11,Math.PI,0);ctx.lineTo(x+11,y+11);
+ for(let i=0;i<3;i++){ctx.lineTo(x+11-i*7.33-3.67,y+6);ctx.lineTo(x+11-(i+1)*7.33,y+11)}
+ ctx.closePath();ctx.fill();ctx.fillStyle='#221c3a';ctx.fillRect(x-5,y-6,3,5);ctx.fillRect(x+2,y-6,3,5)}
+function bar(x,y,w,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,w,12);ctx.fillStyle=col;ctx.fillRect(x,y,w*Math.max(0,Math.min(1,f)),12);ctx.fillStyle='#ece9fa';ctx.font='13px Georgia';ctx.textAlign='left';ctx.fillText(label,x,y-5)}
+
+function draw(dt){
+ const d=devicePixelRatio||1,top=48,vw=innerWidth,vh=innerHeight;
+ if(cv.width!=vw*d||cv.height!=vh*d){cv.width=vw*d;cv.height=vh*d}
+ ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#0b0a14';ctx.fillRect(0,0,cv.width,cv.height);
+ if(!S||!base)return;
+ const k=Math.min(1,dt*18);
+ for(const id in D){const e=D[id];e.x+=(e.tx-e.x)*k;e.y+=(e.ty-e.y)*k}
+ DG.x+=(DG.tx-DG.x)*k;DG.y+=(DG.ty-DG.y)*k;
+ sc=Math.min(vw/PW,(vh-top)/PH);ox=(vw-PW*sc)/2;oy=top+(vh-top-PH*sc)/2;
+ ctx.setTransform(d*sc,0,0,d*sc,d*ox,d*oy);ctx.drawImage(base,0,0);
+ const hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]);
+ for(const p of S.pk){ctx.fillStyle='#7cf2a0';ctx.fillRect(p.x-6,p.y-9,12,18);ctx.fillStyle='#0b3a22';ctx.fillRect(p.x-3,p.y-12,6,3)}
+ if(!hv)for(const h of hs)if(h.on&&!h.down){ctx.fillStyle='rgba(255,236,150,.22)';ctx.beginPath();cone(h).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
+ ctx.font='11px Georgia';ctx.textAlign='center';
+ for(const h of hs){
+  ctx.fillStyle=h.down?'#6b6684':`hsl(${h.id*47%360} 70% 62%)`;ctx.beginPath();ctx.arc(h.x,h.y,10,0,7);ctx.fill();
+  if(!h.down){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(h.x+Math.cos(h.ang)*6,h.y+Math.sin(h.ang)*6,3.5,0,7);ctx.fill()}
+  else if(h.rev>0){ctx.strokeStyle='#7cf2a0';ctx.lineWidth=3;ctx.beginPath();ctx.arc(h.x,h.y,15,-Math.PI/2,-Math.PI/2+h.rev*6.283);ctx.stroke()}
+  if(h.id==me){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(h.x,h.y,14,0,7);ctx.stroke()}
+  ctx.fillStyle='#ece9fa';ctx.fillText(names[h.id]||'',h.x,h.y-16)}
+ if(DG.vis)ghostShape(DG.x,DG.y);
+ if(hv&&my){
+  fc.globalCompositeOperation='source-over';fc.fillStyle=S.fl>0?'rgba(6,5,14,.4)':'rgba(6,5,14,.95)';fc.fillRect(0,0,PW,PH);
+  fc.globalCompositeOperation='destination-out';
+  const glow=(x,y,r)=>{const gr=fc.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');fc.fillStyle=gr;fc.beginPath();fc.arc(x,y,r,0,7);fc.fill()};
+  glow(my.x,my.y,70);
+  for(const h of hs){if(h!==my)glow(h.x,h.y,22);
+   if(h.on&&!h.down){const gr=fc.createRadialGradient(h.x,h.y,0,h.x,h.y,RANGE);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,.25)');fc.fillStyle=gr;fc.beginPath();cone(h).forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}}
+  ctx.drawImage(fog,0,0);
+  if(S.near){ctx.font='bold 26px Georgia';ctx.textAlign='center';ctx.fillStyle=S.near==2?'#ff6b8b':'#ffd25a';ctx.fillText(S.near==2?'!':'?',my.x,my.y-24)}}
+ if(S.fl>0){ctx.fillStyle=`rgba(255,255,255,${S.fl*.35})`;ctx.fillRect(0,0,PW,PH)}
+ if(S.ring>0){ctx.fillStyle=`rgba(150,90,255,${S.ring*.6})`;ctx.fillRect(0,0,PW,PH)}
+ ctx.setTransform(d,0,0,d,0,0);ctx.font='15px Georgia';ctx.textAlign='left';ctx.fillStyle='#ece9fa';
+ const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
+ ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,14,30);
+ bar(vw/2-110,28,220,S.hp/S.mx,'#ffd25a','Ghost health');
+ if(S.role=='hunter')bar(vw-190,28,170,S.bat/100,S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':'Battery');
+ else if(S.role=='ghost'){bar(vw-190,28,170,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-250,40)}}
+let last=0;
+(function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
+</script></body></html>
