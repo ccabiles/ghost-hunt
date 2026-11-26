@@ -37,42 +37,67 @@ function los(a,b,c,d){const n=Math.hypot(c-a,d-b)/6|0;for(let i=1;i<n;i++)if(wal
 const hit=(h,o)=>{const dx=o.x-h.x,dy=o.y-h.y,d=Math.hypot(dx,dy);if(d>RANGE)return false;if(d<14)return true;
  return Math.abs(angd(Math.atan2(dy,dx),h.ang))<HALF&&los(h.x,h.y,o.x,o.y)};
 
-const P=new Map();let nid=1,ph='lobby',R=null,rot=0,msg='';
+const P=new Map();let nid=1,ph='lobby',R=null,lastG=0,msg='',bo=5,awardId=0;
+// match score: g = rounds won by the ghost, h = rounds won by the hunters, t = rounds needed to win the match
+let M={g:0,h:0,t:3,fin:'',last:'',aw:null};
 const pick=f=>{const c=FL.filter(f);return c[Math.random()*c.length|0]};
 const tc=([x,y])=>[x*T+T/2,y*T+T/2];
 const send=(p,o)=>{if(p.ws.readyState==1)p.ws.send(JSON.stringify(o))};
 const hostId=()=>P.keys().next().value;
 const hunters=()=>[...P.values()].filter(p=>p.rd&&p.id!=R.gid);
-function lobby(){const ps=[...P.values()].map(p=>[p.id,p.name,p.score]);for(const p of P.values())send(p,{t:'l',ps,host:hostId(),ph,msg,me:p.id})}
+// players who left mid-match (p.away) see the lobby while the match carries on without them
+function lobby(){
+ const ps=[...P.values()].map(p=>[p.id,p.name,p.pref,p.away?1:0]);
+ for(const p of P.values())send(p,{t:'l',ps,host:hostId(),ph:p.away?'lobby':ph,mp:ph=='lobby'?0:ph=='awards'?2:1,msg,ms:[M.g,M.h,M.t],fin:M.fin,last:M.last,aw:M.aw,bo,me:p.id})}
+function toLobby(m){ph='lobby';msg=m||'';for(const p of P.values()){p.away=false;p.rd=false}M.g=M.h=0;lobby()}
+function startMatch(){
+ if([...P.values()].filter(p=>!p.away).length<2)return;
+ M={g:0,h:0,t:(bo+1)/2,fin:'',last:'',aw:null};
+ for(const p of P.values())p.st={dmg:0,fa:0,rv:0}; // match-long stats for the awards
+ begin()}
+function leave(p){
+ if(ph=='lobby'||p.away)return;
+ const wasG=ph=='play'&&p.id==R.gid;p.away=true;p.rd=false;p.on=false;
+ if(ph=='play'&&(wasG||!hunters().length))end('A player left: round cancelled','x');else lobby()}
 
 function begin(){
- const ids=[...P.keys()];
- if(ids.length<2){ph='lobby';msg='';return lobby()}
- genMap();for(const p of P.values())send(p,mapMsg());
- const gid=ids[rot++%ids.length],n=ids.length-1,[gx,gy]=tc(pick(([x,y])=>x>30&&y>15)),hp=80+14*n;
- R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:3,g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:0}};
- for(const p of P.values()){p.rd=true;p.down=false;p.rev=0;p.bat=100;p.on=false;p.revs=0;if(p.id!=gid)[p.x,p.y]=tc(pick(([x])=>x<20))}
+ const act=[...P.values()].filter(p=>!p.away);
+ if(act.length<2)return toLobby('Not enough players: back to the lobby');
+ genMap();for(const p of act)send(p,mapMsg());
+ // players who chose Ghost take turns haunting; if nobody did, everyone takes turns
+ const vol=act.filter(p=>p.pref=='g'),pool=vol.length?vol:act,gp=pool.find(p=>p.id>lastG)||pool[0];lastG=gp.id;
+ const gid=gp.id,n=act.length-1,[gx,gy]=tc(pick(([x,y])=>x>30&&y>15)),hp=80+14*n;
+ R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:5,al:null,K:Math.min(6,Math.max(3,Math.ceil(n/3))),g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:0,fcd:0}};
+ for(let i=0;i<R.K;i++){const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}
+ for(const p of P.values()){p.rd=!p.away;p.down=false;p.rev=0;p.bat=100;p.on=false;p.revs=0;p.drag=0;if(p.rd&&p.id!=gid)[p.x,p.y]=tc(pick(([x])=>x<20))}
  ph='play';msg='';lobby()}
 
-function end(m,k){ // k: h hunters win, g ghost wins, d draw, x cancelled
- ph='over';msg=m;const hs=hunters(),gp=P.get(R.gid),dn=hs.filter(h=>h.down).length;
- if(k!='x')hs.forEach(h=>h.score+=(k=='h'?2:0)+h.revs);
- if(gp&&k!='x')gp.score+=dn+(k=='g'?3:0);
- snap();lobby();setTimeout(()=>{if(ph=='over')begin()},9000)}
+// after the last round of a match everyone sees the awards, then each player presses Return to Lobby
+function awards(){ph='awards';msg='';lobby();const id=++awardId;setTimeout(()=>{if(ph=='awards'&&awardId==id)toLobby('')},90000)}
+function end(m,k){ // k: h hunters win the round, g ghost wins the round, x cancelled (no score)
+ ph='over';msg=m;
+ if(k=='g')M.g++;else if(k=='h')M.h++;
+ const done=M.g>=M.t||M.h>=M.t;
+ if(done){M.fin=`${M.g>M.h?'The ghost wins':'The hunters win'} the match, ${Math.max(M.g,M.h)} to ${Math.min(M.g,M.h)}!`;M.last=M.fin;
+  const top=k2=>{let b=null;for(const p of P.values())if(p.st[k2]>0&&(!b||p.st[k2]>b.st[k2]))b=p;return b?[b.name,Math.round(b.st[k2])]:null};
+  M.aw={bh:top('dmg'),sc:top('fa'),ls:top('rv')}}
+ snap();lobby();
+ setTimeout(()=>{if(ph!='over')return;if(done)awards();else begin()},done?6000:8000)}
 
 function snap(){
  if(!R)return;const g=R.g,all=ph!='play',L=hunters().map(h=>[h.id,h.x|0,h.y|0,+h.ang.toFixed(2),h.on?1:0,h.down?1:0,+h.rev.toFixed(2)]);
  for(const p of P.values()){
+  if(p.away)continue;
   const isG=p.id==R.gid,ob=isG||!p.rd||all,d=ob?9999:dist(p,g);
   // the ghost's position is only sent when this player is allowed to see it
   send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||g.vis>0)?[g.x|0,g.y|0]:null,
-   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,pk:R.pk,lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
+   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
 
 setInterval(()=>{
  if(ph!='play')return;
  const dt=1/30,g=R.g,gp=P.get(R.gid),hs=hunters();
  if(!gp)return end('The ghost left: round cancelled','x');
- R.time-=dt;R.ring=Math.max(0,R.ring-dt);
+ R.time-=dt;R.ring=Math.max(0,R.ring-dt);if(R.al&&(R.al.t-=dt)<=0)R.al=null;
  // lightning: 1.5s of flickering windows as a warning, then 1.2s of light through that side's windows
  if(R.lt){R.lt.t+=dt;
   if(R.lt.t>=1.5&&R.lt.t<2.7&&!R.lt.hit&&inStrip(R.lt.s,g)){R.lt.hit=1;g.stun=3;g.vis=5}
@@ -84,24 +109,27 @@ setInterval(()=>{
   move(h,i.kx/l*105*dt,i.ky/l*105*dt);h.ang=i.ang;h.on=!!i.on&&h.bat>0;
   if(h.on){h.bat-=12*dt;if(h.bat<=0){h.bat=0;h.on=false}}
   for(let k=R.pk.length-1;k>=0;k--)if(dist(h,R.pk[k])<18){h.bat=Math.min(100,h.bat+60);R.pk.splice(k,1)}}
- R.spawn-=dt;
- if(R.spawn<=0){R.spawn=4;if(R.pk.length<3&&hs.some(h=>!h.down&&h.bat<40)){const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}}
- g.stun=Math.max(0,g.stun-dt);g.vis=Math.max(0,g.vis-dt);
+ if(R.pk.length<R.K){R.spawn-=dt;if(R.spawn<=0){R.spawn=5;const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}}else R.spawn=5;
+ g.stun=Math.max(0,g.stun-dt);g.vis=Math.max(0,g.vis-dt);g.fcd=Math.max(0,g.fcd-dt);
  const ip=g.stun>0?{kx:0,ky:0,dash:0,ch:0}:gp.in;if(g.stun>0)g.charge=0;g.dash=Math.max(0,g.dash-dt);g.dcd=Math.max(0,g.dcd-dt);
  if(ip.ch)g.charge=Math.min(1,g.charge+dt/2.5);
  else{if(g.charge>=1){hs.forEach(h=>{h.bat=0;h.on=false});R.pk=[];R.ring=.6}g.charge=0}
  if(ip.dash&&g.dcd<=0&&!ip.ch){g.dash=.25;g.dcd=2}
  const l=Math.hypot(ip.kx,ip.ky)||1,sp=115*(ip.ch?.45:1)*(g.dash>0?2.6:1);
- move(g,ip.kx/l*sp*dt,ip.ky/l*sp*dt);
- let n=0;
+ const gx0=g.x,gy0=g.y;move(g,ip.kx/l*sp*dt,ip.ky/l*sp*dt);
+ // a hunter who just fainted is dragged along with the ghost for up to 2.5s or 192px
+ const gdx=g.x-gx0,gdy=g.y-gy0;
+ for(const o of hs)if(o.down&&o.drag>0){o.drag-=dt;const ox=o.x,oy=o.y;move(o,gdx,gdy);o.dragd-=Math.hypot(o.x-ox,o.y-oy);if(o.dragd<=0)o.drag=0}
+ let n=0,chg=false;const hb=[];
  for(const h of hs){if(!h.on||h.down)continue;
-  if(hit(h,g))n++;
-  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/2+.3*dt;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);h.revs++}}}
- if(n){g.hp-=6*Math.pow(n,.75)*dt;g.lit=.25}else g.lit=Math.max(0,g.lit-dt);
- for(const h of hs)if(!h.down&&dist(h,g)<19){h.down=true;h.on=false;h.rev=0}
+  if(hit(h,g)){n++;hb.push(h)}
+  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/2+.3*dt;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);o.drag=0;chg=true;h.revs++;h.st.rv++}}}
+ if(n){const dm=6*Math.pow(n,.75)*dt;g.hp-=dm;for(const h of hb)h.st.dmg+=dm/n;g.lit=.25;if(g.fcd<=0){g.stun=Math.max(g.stun,Math.min(1.2,.5+.15*n));g.fcd=3.5}}else g.lit=Math.max(0,g.lit-dt);
+ for(const h of hs)if(!h.down&&dist(h,g)<19){h.down=true;h.on=false;h.rev=0;h.drag=2.5;h.dragd=192;chg=true;h.st.fa++}
+ if(chg)R.al={n:hs.filter(h=>!h.down).length,t:3};
  if(g.hp<=0)end('The hunters win!','h');
  else if(hs.length&&hs.every(h=>h.down))end('The ghost wins!','g');
- else if(R.time<=0)end('Time’s up: a draw','d');
+ else if(R.time<=0)end('Time’s up: the ghost survives!','g');
  else snap()},33);
 
 const srv=http.createServer((q,s)=>{s.setHeader('Content-Type','text/html; charset=utf-8');s.end(fs.readFileSync(__dirname+'/index.html'))});
@@ -111,10 +139,14 @@ wss.on('connection',ws=>{
  ws.on('message',raw=>{let m;try{m=JSON.parse(raw)}catch{return}
   if(m.t=='join'&&!p){
    if(P.size>=MAXP)return ws.send('{"t":"full"}');
-   p={ws,id:nid++,name:String(m.name||'Player').slice(0,14),score:0,rd:false,x:0,y:0,r:9,ang:0,on:false,down:false,rev:0,bat:100,revs:0,in:{kx:0,ky:0,ang:0,on:0,dash:0,ch:0}};
+   p={ws,id:nid++,name:String(m.name||'Player').slice(0,14),score:0,st:{dmg:0,fa:0,rv:0},pref:'h',away:ph=='play',rd:false,x:0,y:0,r:9,ang:0,on:false,down:false,rev:0,bat:100,revs:0,in:{kx:0,ky:0,ang:0,on:0,dash:0,ch:0}};
    P.set(p.id,p);send(p,mapMsg());lobby()}
   else if(p&&m.t=='in'){const i=p.in,c=v=>Math.max(-1,Math.min(1,+v||0));i.kx=c(m.kx);i.ky=c(m.ky);i.ang=+m.ang||0;i.on=m.on?1:0;i.dash=m.dash?1:0;i.ch=m.ch?1:0}
-  else if(p&&m.t=='start'&&ph=='lobby'&&p.id==hostId())begin()});
+  else if(p&&m.t=='role'){p.pref=m.v=='g'?'g':'h';lobby()}
+  else if(p&&m.t=='bo'&&ph=='lobby'&&p.id==hostId()&&[1,3,5,7].includes(+m.v)){bo=+m.v;lobby()}
+  else if(p&&m.t=='leave')leave(p);
+  else if(p&&m.t=='back'&&ph=='awards'&&!p.away){p.away=true;if([...P.values()].every(q=>q.away))toLobby('');else lobby()}
+  else if(p&&m.t=='start'&&ph=='lobby'&&p.id==hostId())startMatch()});
  ws.on('close',()=>{if(!p)return;P.delete(p.id);
-  if(ph=='play'&&(p.id==R.gid||!hunters().length))end('A player left: round cancelled','x');else lobby()})});
+  if(ph=='play'&&(p.id==R.gid||!hunters().length))end('A player left: round cancelled','x');else if(ph=='awards'&&[...P.values()].every(q=>q.away))toLobby('');else lobby()})});
 srv.listen(PORT,()=>console.log('Ghost Hunt running on port '+PORT));
