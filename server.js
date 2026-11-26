@@ -1,13 +1,33 @@
 // Ghost Hunt multiplayer server. Run: npm install && node server.js
 const http=require('http'),fs=require('fs'),{WebSocketServer}=require('ws');
 const T=32,CW=10,CH=8,W=41,H=25,RANGE=210,HALF=.42,PORT=process.env.PORT||3000,MAXP=15;
-const grid=[],FL=[];
-for(let y=0;y<H;y++){grid[y]=[];for(let x=0;x<W;x++){
- let w=x==0||y==0||x==W-1||y==H-1;const rx=x%CW,ry=y%CH;
- if(!w&&rx==0&&!(ry==3||ry==4))w=true;
- if(!w&&ry==0&&!(rx==4||rx==5))w=true;
- if(!w&&rx>0&&ry>0){if((rx==6||rx==7)&&(ry==1||ry==2))w=true;if((rx==2||rx==3)&&(ry==5||ry==6))w=true}
- grid[y][x]=w?1:0;if(!w)FL.push([x,y])}}
+let grid,FL,MAP;
+const rnd=(a,b)=>a+Math.random()*(b-a+1)|0;
+// A new random mansion every round: a 4x3 grid of rooms with randomly placed doors, furniture (tile 3) and windows (tile 2)
+function genMap(){
+ for(let tries=0;tries<200;tries++){
+  const g=Array.from({length:H},(_,y)=>Array.from({length:W},(_,x)=>x%CW==0||y%CH==0?1:0));
+  const soV=[],soH=[];
+  for(let r=0;r<3;r++){const so=soV[r]=rnd(0,5);for(const wx of[10,20,30]){const o=[Math.random()<.7?so:rnd(0,5)];if(Math.random()<.3)o.push(rnd(0,5));for(const a of o)for(let d=0;d<2;d++)g[r*CH+1+a+d][wx]=0}}
+  for(let c=0;c<4;c++){const so=soH[c]=rnd(0,7);for(const wy of[8,16]){const o=[Math.random()<.7?so:rnd(0,7)];if(Math.random()<.3)o.push(rnd(0,7));for(const a of o)for(let d=0;d<2;d++)g[wy][c*CW+1+a+d]=0}}
+  for(let r=0;r<3;r++)for(let c=0;c<4;c++)for(let k=rnd(0,2);k>0;k--){const w=rnd(1,2),h=rnd(1,3),x=c*CW+rnd(2,9-w),y=r*CH+rnd(2,7-h);for(let j=0;j<h;j++)for(let i=0;i<w;i++)g[y+j][x+i]=3}
+  const wn=[[],[],[],[]],st=[[],[],[],[]];
+  const addWin=(s,b)=>{if(s%2==0){const x=b*CW+1+(Math.random()<.6?soH[b]:rnd(0,7)),y=s?H-1:0;g[y][x]=g[y][x+1]=2;wn[s].push([x*T,y*T,2*T,T])}else{const y=b*CH+1+(Math.random()<.6?soV[b]:rnd(0,5)),x=s==1?W-1:0;g[y][x]=g[y+1][x]=2;wn[s].push([x*T,y*T,T,2*T])}};
+  for(let s=0;s<4;s++){const n=s%2?3:4;for(let b=0;b<n;b++)if(Math.random()<.75)addWin(s,b);if(!wn[s].length)addWin(s,rnd(0,n-1))}
+  // light strips: from each window tile straight inward until a wall or furniture stops it (side: 0 top, 1 right, 2 bottom, 3 left)
+  for(let s=0;s<4;s++)for(const[x,y]of wn[s])for(let d=0;d<2;d++){
+   if(s==0){const tx=x/T+d;let ty=1;while(g[ty][tx]===0)ty++;st[0].push([tx*T,0,T,ty*T])}
+   if(s==2){const tx=x/T+d;let ty=H-2;while(g[ty][tx]===0)ty--;st[2].push([tx*T,(ty+1)*T,T,(H-1-ty)*T])}
+   if(s==3){const ty=y/T+d;let tx=1;while(g[ty][tx]===0)tx++;st[3].push([0,ty*T,tx*T,T])}
+   if(s==1){const ty=y/T+d;let tx=W-2;while(g[ty][tx]===0)tx--;st[1].push([(tx+1)*T,ty*T,(W-1-tx)*T,T])}}
+  const fl=[];for(let y=0;y<H;y++)for(let x=0;x<W;x++)if(g[y][x]===0)fl.push([x,y]);
+  const seen=new Set([fl[0][1]*W+fl[0][0]]),q=[fl[0]];
+  for(let i=0;i<q.length;i++){const[x,y]=q[i];for(const[dx,dy]of[[1,0],[-1,0],[0,1],[0,-1]]){const nx=x+dx,ny=y+dy,k=ny*W+nx;if(g[ny]&&g[ny][nx]===0&&!seen.has(k)){seen.add(k);q.push([nx,ny])}}}
+  if(seen.size!=fl.length&&tries<199)continue;
+  grid=g;FL=fl;MAP={wn,st,sd:Math.random()*1e9|0};return}}
+const mapMsg=()=>({t:'m',g:grid.map(r=>r.join('')),wn:MAP.wn,st:MAP.st,sd:MAP.sd});
+genMap();
+const inStrip=(s,g)=>MAP.st[s].some(([x,y,w,h])=>g.x>x-9&&g.x<x+w+9&&g.y>y-9&&g.y<y+h+9);
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
 const blocked=(x,y,r)=>wall(x-r,y-r)||wall(x+r,y-r)||wall(x-r,y+r)||wall(x+r,y+r);
 const move=(e,dx,dy)=>{if(!blocked(e.x+dx,e.y,e.r))e.x+=dx;if(!blocked(e.x,e.y+dy,e.r))e.y+=dy};
@@ -28,8 +48,9 @@ function lobby(){const ps=[...P.values()].map(p=>[p.id,p.name,p.score]);for(cons
 function begin(){
  const ids=[...P.keys()];
  if(ids.length<2){ph='lobby';msg='';return lobby()}
+ genMap();for(const p of P.values())send(p,mapMsg());
  const gid=ids[rot++%ids.length],n=ids.length-1,[gx,gy]=tc(pick(([x,y])=>x>30&&y>15)),hp=80+14*n;
- R={gid,time:180,flash:0,nf:10,ring:0,pk:[],spawn:3,g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0}};
+ R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:3,g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:0}};
  for(const p of P.values()){p.rd=true;p.down=false;p.rev=0;p.bat=100;p.on=false;p.revs=0;if(p.id!=gid)[p.x,p.y]=tc(pick(([x])=>x<20))}
  ph='play';msg='';lobby()}
 
@@ -44,15 +65,19 @@ function snap(){
  for(const p of P.values()){
   const isG=p.id==R.gid,ob=isG||!p.rd||all,d=ob?9999:dist(p,g);
   // the ghost's position is only sent when this player is allowed to see it
-  send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||R.flash>0)?[g.x|0,g.y|0]:null,
-   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,pk:R.pk,fl:R.flash,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
+  send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||g.vis>0)?[g.x|0,g.y|0]:null,
+   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,pk:R.pk,lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
 
 setInterval(()=>{
  if(ph!='play')return;
  const dt=1/30,g=R.g,gp=P.get(R.gid),hs=hunters();
  if(!gp)return end('The ghost left: round cancelled','x');
- R.time-=dt;R.flash=Math.max(0,R.flash-dt);R.ring=Math.max(0,R.ring-dt);R.nf-=dt;
- if(R.nf<=0){R.flash=.5;R.nf=12+Math.random()*10}
+ R.time-=dt;R.ring=Math.max(0,R.ring-dt);
+ // lightning: 1.5s of flickering windows as a warning, then 1.2s of light through that side's windows
+ if(R.lt){R.lt.t+=dt;
+  if(R.lt.t>=1.5&&R.lt.t<2.7&&!R.lt.hit&&inStrip(R.lt.s,g)){R.lt.hit=1;g.stun=3;g.vis=5}
+  if(R.lt.t>=2.7)R.lt=null}
+ else{R.nf-=dt;if(R.nf<=0){R.lt={s:Math.random()*4|0,t:0,hit:0};R.nf=14+Math.random()*10}}
  for(const h of hs){
   if(h.down){h.rev=Math.max(0,h.rev-.3*dt);continue}
   const i=h.in,l=Math.hypot(i.kx,i.ky)||1;
@@ -61,7 +86,8 @@ setInterval(()=>{
   for(let k=R.pk.length-1;k>=0;k--)if(dist(h,R.pk[k])<18){h.bat=Math.min(100,h.bat+60);R.pk.splice(k,1)}}
  R.spawn-=dt;
  if(R.spawn<=0){R.spawn=4;if(R.pk.length<3&&hs.some(h=>!h.down&&h.bat<40)){const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}}
- const ip=gp.in;g.dash=Math.max(0,g.dash-dt);g.dcd=Math.max(0,g.dcd-dt);
+ g.stun=Math.max(0,g.stun-dt);g.vis=Math.max(0,g.vis-dt);
+ const ip=g.stun>0?{kx:0,ky:0,dash:0,ch:0}:gp.in;if(g.stun>0)g.charge=0;g.dash=Math.max(0,g.dash-dt);g.dcd=Math.max(0,g.dcd-dt);
  if(ip.ch)g.charge=Math.min(1,g.charge+dt/2.5);
  else{if(g.charge>=1){hs.forEach(h=>{h.bat=0;h.on=false});R.pk=[];R.ring=.6}g.charge=0}
  if(ip.dash&&g.dcd<=0&&!ip.ch){g.dash=.25;g.dcd=2}
@@ -86,7 +112,7 @@ wss.on('connection',ws=>{
   if(m.t=='join'&&!p){
    if(P.size>=MAXP)return ws.send('{"t":"full"}');
    p={ws,id:nid++,name:String(m.name||'Player').slice(0,14),score:0,rd:false,x:0,y:0,r:9,ang:0,on:false,down:false,rev:0,bat:100,revs:0,in:{kx:0,ky:0,ang:0,on:0,dash:0,ch:0}};
-   P.set(p.id,p);send(p,{t:'m',g:grid.map(r=>r.join(''))});lobby()}
+   P.set(p.id,p);send(p,mapMsg());lobby()}
   else if(p&&m.t=='in'){const i=p.in,c=v=>Math.max(-1,Math.min(1,+v||0));i.kx=c(m.kx);i.ky=c(m.ky);i.ang=+m.ang||0;i.on=m.on?1:0;i.dash=m.dash?1:0;i.ch=m.ch?1:0}
   else if(p&&m.t=='start'&&ph=='lobby'&&p.id==hostId())begin()});
  ws.on('close',()=>{if(!p)return;P.delete(p.id);

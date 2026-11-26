@@ -7,7 +7,7 @@
 html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
 canvas{position:fixed;inset:0;width:100%;height:100%}
 #menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(11,10,20,.92);text-align:center;padding:24px;overflow:auto}
-h1{font-size:clamp(32px,5vw,54px);margin:0;letter-spacing:-.01em}
+h1{font-size:clamp(32px,5vw,54px);margin:0;letter-spacing:-.01em;font-style:italic;text-shadow:0 0 22px rgba(124,242,160,.35)}
 p{max-width:540px;margin:0;color:var(--mut);line-height:1.5}
 ol{margin:0;padding:0;list-style-position:inside;columns:2;column-gap:40px;text-align:left}
 button,input{font:inherit;font-size:17px;padding:10px 18px;border-radius:8px;border:2px solid var(--acc);background:var(--pnl);color:var(--ink)}
@@ -19,26 +19,64 @@ button:disabled{opacity:.4;cursor:default}
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. Beam a fainted friend to revive them.<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Everyone takes a turn as the ghost.';
-let grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
+const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. Beam a fainted friend to revive them.<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Windows flicker just before lightning shines through them. The light travels in straight lines until a wall or furniture blocks it, and a ghost caught in it is stunned and revealed. The layout changes every game. Everyone takes a turn as the ghost.';
+let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
 let me=0,S=null,ph='join',host=0,msg='',scores=[];
-const ws=new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host);
+let live=true;
+const ws=(()=>{try{if(!/^https?:$/.test(location.protocol)||!location.host)throw 0;return new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host)}catch(e){live=false;return{readyState:0,send(){}}}})();
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
+// side: 0 top, 1 right, 2 bottom, 3 left. The server sends the window rectangles and the light strips they cast (stopped by walls and furniture)
+let WN=[[],[],[],[]],STRP=[[],[],[],[]];
+function lg(c,s,x,y,w,h,a,b){const g=s==0?c.createLinearGradient(x,y,x,y+h):s==2?c.createLinearGradient(x,y+h,x,y):s==3?c.createLinearGradient(x,y,x+w,y):c.createLinearGradient(x+w,y,x,y);g.addColorStop(0,a);g.addColorStop(1,b);return g}
 const angd=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
 function cone(h){const p=[[h.x,h.y]];for(let i=0;i<=36;i++){const a=h.ang-HALF+2*HALF*i/36,cx=Math.cos(a),cy=Math.sin(a);let d=0;while(d<RANGE&&!wall(h.x+cx*d,h.y+cy*d))d+=6;p.push([h.x+cx*d,h.y+cy*d])}return p}
-function buildMap(rows){
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function buildMap(rows,seed){
  grid=rows.map(r=>[...r].map(Number));H=grid.length;W=grid[0].length;PW=W*T;PH=H*T;
- base=document.createElement('canvas');base.width=fog.width=PW;base.height=fog.height=PH;const bc=base.getContext('2d');
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){bc.fillStyle=grid[y][x]?'#38305c':((x+y)%2?'#1a1730':'#1e1a38');bc.fillRect(x*T,y*T,T,T)}
- bc.fillStyle='#cdbfff';
- for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(!grid[y][x])continue;
-  const f=(dx,dy)=>{const nx=x+dx,ny=y+dy;return nx>=0&&ny>=0&&nx<W&&ny<H&&!grid[ny][nx]};
-  if(f(0,-1))bc.fillRect(x*T,y*T,T,3);if(f(0,1))bc.fillRect(x*T,y*T+T-3,T,3);
-  if(f(-1,0))bc.fillRect(x*T,y*T,3,T);if(f(1,0))bc.fillRect(x*T+T-3,y*T,3,T)}}
+ base=document.createElement('canvas');base.width=fog.width=PW;base.height=fog.height=PH;const bc=base.getContext('2d'),R=rng(seed);
+ edges=document.createElement('canvas');edges.width=PW;edges.height=PH;const ec=edges.getContext('2d');
+ const isW=(x,y)=>y>=0&&x>=0&&y<H&&x<W&&(grid[y][x]==1||grid[y][x]==2);
+ // creaky wooden floors, tinted a little differently in each room (furniture sits on the floor)
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=grid[y][x];if(v==1||v==2)continue;
+  const px=x*T,py=y*T,ri=(x/10|0)+(y/8|0)*4;
+  bc.fillStyle=`hsl(${22+ri*13%26} 26% ${13+R()*6}%)`;bc.fillRect(px,py,T,T);
+  bc.fillStyle='rgba(0,0,0,.5)';bc.fillRect(px,py+10,T,1);bc.fillRect(px,py+21,T,1);
+  bc.fillStyle='rgba(255,255,255,.035)';bc.fillRect(px,py+11,T,1);bc.fillRect(px,py+22,T,1);bc.fillRect(px,py,T,1);
+  bc.fillStyle='rgba(0,0,0,.45)';for(let k=0;k<3;k++)if(R()<.5)bc.fillRect(px+(R()*30|0),py+k*11,1,10);
+  if(R()<.07){bc.fillStyle='rgba(0,0,0,.28)';bc.beginPath();bc.arc(px+R()*T,py+R()*T,6+R()*8,0,7);bc.fill()}
+  if(R()<.03){bc.strokeStyle='rgba(0,0,0,.6)';bc.lineWidth=1;bc.beginPath();let cx=px+R()*T,cy=py+R()*T;bc.moveTo(cx,cy);for(let k=0;k<4;k++){cx+=R()*14-7;cy+=R()*14-7;bc.lineTo(cx,cy)}bc.stroke()}}
+ // faded rugs
+ for(let r=0;r<3;r++)for(let c=0;c<4;c++)if(R()<.4){const rx=(c*10+3)*T,ry=(r*8+2)*T;bc.fillStyle='rgba(110,25,40,.4)';bc.fillRect(rx,ry,5*T,4*T);bc.strokeStyle='rgba(200,170,90,.3)';bc.lineWidth=2;bc.strokeRect(rx+5,ry+5,5*T-10,4*T-10)}
+ // wallpaper walls, windows, furniture
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=grid[y][x],px=x*T,py=y*T;
+  if(v==1){bc.fillStyle='#2a2136';bc.fillRect(px,py,T,T);bc.fillStyle='rgba(255,255,255,.045)';for(let k=0;k<4;k++)bc.fillRect(px+k*8+2,py,2,T);
+   if(R()<.14){bc.fillStyle='rgba(0,0,0,.4)';bc.fillRect(px+(R()*28|0),py,3,8+(R()*18|0))}
+   if(R()<.07){bc.fillStyle='rgba(90,130,100,.13)';bc.beginPath();bc.arc(px+R()*T,py+R()*T,7+R()*7,0,7);bc.fill()}}
+  else if(v==2){bc.fillStyle='#14102a';bc.fillRect(px,py,T,T);bc.fillStyle='#6f95d6';bc.fillRect(px+3,py+3,T-6,T-6);bc.fillStyle='rgba(255,255,255,.25)';bc.fillRect(px+5,py+5,6,T-10);bc.fillStyle='#14102a';bc.fillRect(px+T/2-1,py+3,2,T-6);bc.fillRect(px+3,py+T/2-1,T-6,2)}
+  else if(v==3){bc.fillStyle='#4d3022';bc.fillRect(px+2,py+2,T-4,T-4);bc.strokeStyle='#150b07';bc.lineWidth=2;bc.strokeRect(px+2,py+2,T-4,T-4);bc.fillStyle='rgba(255,255,255,.07)';bc.fillRect(px+4,py+4,T-8,3);bc.fillStyle='rgba(0,0,0,.3)';bc.fillRect(px+4,py+T/2,T-8,2)}}
+ // cobwebs in some corners
+ const web=(cx,cy,sx,sy,L)=>{bc.strokeStyle='rgba(225,225,240,.3)';bc.lineWidth=1;
+  for(let i=0;i<=4;i++){const a=i*Math.PI/8;bc.beginPath();bc.moveTo(cx,cy);bc.lineTo(cx+sx*Math.cos(a)*L,cy+sy*Math.sin(a)*L);bc.stroke()}
+  for(let r=1;r<=3;r++){bc.beginPath();for(let i=0;i<=4;i++){const a=i*Math.PI/8,q=L*r/3*(i%2?.82:1);bc[i?'lineTo':'moveTo'](cx+sx*Math.cos(a)*q,cy+sy*Math.sin(a)*q)}bc.stroke()}};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){if(grid[y][x]!=0||R()>=.5)continue;
+  const U=isW(x,y-1),Dn=isW(x,y+1),Lf=isW(x-1,y),Rt=isW(x+1,y),L=26+R()*14;
+  if(U&&Lf)web(x*T,y*T,1,1,L);else if(U&&Rt)web(x*T+T,y*T,-1,1,L);else if(Dn&&Lf)web(x*T,y*T+T,1,-1,L);else if(Dn&&Rt)web(x*T+T,y*T+T,-1,-1,L)}
+ // pale moonlight pooling under each window
+ WN.forEach((ws,s)=>ws.forEach(([x,y,w,h])=>{const cx=s%2==0?x+w/2:(s==3?x+w+6:x-6),cy=s%2==0?(s==0?y+h+6:y-6):y+h/2,gr=bc.createRadialGradient(cx,cy,0,cx,cy,80);
+  gr.addColorStop(0,'rgba(130,170,255,.22)');gr.addColorStop(1,'rgba(130,170,255,0)');bc.fillStyle=gr;bc.beginPath();bc.arc(cx,cy,80,0,7);bc.fill()}));
+ // bright wall outlines (also drawn over the fog in hunter view)
+ bc.fillStyle=ec.fillStyle='#cdbfff';const E=(a,b,c,d)=>{bc.fillRect(a,b,c,d);ec.fillRect(a,b,c,d)};
+ for(let y=0;y<H;y++)for(let x=0;x<W;x++){const v=grid[y][x];if(v!=1&&v!=2)continue;
+  const f=(dx,dy)=>{const nx=x+dx,ny=y+dy;return nx>=0&&ny>=0&&nx<W&&ny<H&&grid[ny][nx]!=1&&grid[ny][nx]!=2};
+  if(f(0,-1))E(x*T,y*T,T,3);if(f(0,1))E(x*T,y*T+T-3,T,3);
+  if(f(-1,0))E(x*T,y*T,3,T);if(f(1,0))E(x*T+T-3,y*T,3,T)}
+ const vg=bc.createRadialGradient(PW/2,PH/2,PH*.35,PW/2,PH/2,PW*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');bc.fillStyle=vg;bc.fillRect(0,0,PW,PH)}
 function menu(){
- const m=$('menu');if(ph=='play'){m.style.display='none';return}
+ const m=$('menu');
+ if(!live){m.style.display='flex';m.innerHTML='<h1>Ghost Hunt</h1><p>This page needs the game server to work. Open the link to your running game (the address that ends in onrender.com), or run <code>node server.js</code> and visit http://localhost:3000. It can’t run as a plain file or inside a preview.</p>';return}
+ if(ph=='play'){m.style.display='none';return}
  m.style.display='flex';
  if(!me){m.innerHTML='<h1>Ghost Hunt</h1><p>'+CONTROLS+'</p><div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
   $('jn').onclick=join;$('nm').onkeydown=e=>{if(e.key=='Enter')join()};return}
@@ -48,7 +86,7 @@ function menu(){
  if($('go'))$('go').onclick=()=>ws.send('{"t":"start"}')}
 function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
 ws.onmessage=e=>{const m=JSON.parse(e.data);
- if(m.t=='m')buildMap(m.g);
+ if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd)}
  else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
  else if(m.t=='s'){S=m;
@@ -83,7 +121,7 @@ function draw(dt){
  DG.x+=(DG.tx-DG.x)*k;DG.y+=(DG.ty-DG.y)*k;
  sc=Math.min(vw/PW,(vh-top)/PH);ox=(vw-PW*sc)/2;oy=top+(vh-top-PH*sc)/2;
  ctx.setTransform(d*sc,0,0,d*sc,d*ox,d*oy);ctx.drawImage(base,0,0);
- const hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]);
+ const lt=S.lt,act=!!lt&&lt[1]>=1.5&&lt[1]<2.7,warn=!!lt&&lt[1]<1.5,hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]);
  for(const p of S.pk){ctx.fillStyle='#7cf2a0';ctx.fillRect(p.x-6,p.y-9,12,18);ctx.fillStyle='#0b3a22';ctx.fillRect(p.x-3,p.y-12,6,3)}
  if(!hv)for(const h of hs)if(h.on&&!h.down){ctx.fillStyle='rgba(255,236,150,.22)';ctx.beginPath();cone(h).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
  ctx.font='11px Georgia';ctx.textAlign='center';
@@ -95,22 +133,26 @@ function draw(dt){
   ctx.fillStyle='#ece9fa';ctx.fillText(names[h.id]||'',h.x,h.y-16)}
  if(DG.vis)ghostShape(DG.x,DG.y);
  if(hv&&my){
-  fc.globalCompositeOperation='source-over';fc.fillStyle=S.fl>0?'rgba(6,5,14,.4)':'rgba(6,5,14,.95)';fc.fillRect(0,0,PW,PH);
+  fc.globalCompositeOperation='source-over';fc.fillStyle=act?'rgba(6,5,14,.9)':'rgba(6,5,14,.95)';fc.fillRect(0,0,PW,PH);
   fc.globalCompositeOperation='destination-out';
   const glow=(x,y,r)=>{const gr=fc.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');fc.fillStyle=gr;fc.beginPath();fc.arc(x,y,r,0,7);fc.fill()};
   glow(my.x,my.y,70);
   for(const h of hs){if(h!==my)glow(h.x,h.y,22);
    if(h.on&&!h.down){const gr=fc.createRadialGradient(h.x,h.y,0,h.x,h.y,RANGE);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,.25)');fc.fillStyle=gr;fc.beginPath();cone(h).forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}}
-  ctx.drawImage(fog,0,0);
+  if(act)for(const[x,y,w,h]of STRP[lt[0]]){fc.fillStyle=lg(fc,lt[0],x,y,w,h,'rgba(0,0,0,.95)','rgba(0,0,0,.45)');fc.fillRect(x,y,w,h)}
+  ctx.drawImage(fog,0,0);ctx.globalAlpha=.6;ctx.drawImage(edges,0,0);ctx.globalAlpha=1;
   if(S.near){ctx.font='bold 26px Georgia';ctx.textAlign='center';ctx.fillStyle=S.near==2?'#ff6b8b':'#ffd25a';ctx.fillText(S.near==2?'!':'?',my.x,my.y-24)}}
- if(S.fl>0){ctx.fillStyle=`rgba(255,255,255,${S.fl*.35})`;ctx.fillRect(0,0,PW,PH)}
+ if(lt){const s=lt[0];
+  if(warn){ctx.fillStyle=`rgba(190,220,255,${.35+.35*Math.sin(lt[1]*22)})`;for(const[x,y,w,h]of WN[s])ctx.fillRect(x,y,w,h)}
+  else if(act){for(const[x,y,w,h]of STRP[s]){ctx.fillStyle=lg(ctx,s,x,y,w,h,'rgba(200,225,255,.55)','rgba(200,225,255,.12)');ctx.fillRect(x,y,w,h)}
+   if(lt[1]<1.7){ctx.fillStyle=`rgba(255,255,255,${(1.7-lt[1])*.5})`;ctx.fillRect(0,0,PW,PH)}}}
  if(S.ring>0){ctx.fillStyle=`rgba(150,90,255,${S.ring*.6})`;ctx.fillRect(0,0,PW,PH)}
  ctx.setTransform(d,0,0,d,0,0);ctx.font='15px Georgia';ctx.textAlign='left';ctx.fillStyle='#ece9fa';
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
  ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,14,30);
  bar(vw/2-110,28,220,S.hp/S.mx,'#ffd25a','Ghost health');
  if(S.role=='hunter')bar(vw-190,28,170,S.bat/100,S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':'Battery');
- else if(S.role=='ghost'){bar(vw-190,28,170,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-250,40)}}
+ else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned by lightning!',vw/2,70)}bar(vw-190,28,170,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-250,40)}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
 </script></body></html>
