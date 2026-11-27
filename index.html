@@ -39,7 +39,7 @@ details{max-width:540px}
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. A fainted friend shows a grey heart: keep a flashlight on them to fill it red and revive them (10 seconds with one light, faster with more).<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Windows flicker just before lightning shines through them. The light travels in straight lines until a wall or furniture blocks it, and a ghost caught in it is revealed to every hunter for a few seconds. A flashlight beam briefly stuns the ghost, and the ghost can drag a hunter it just made faint a short way. Batteries keep respawning around the map. The ghost starts in the middle of the map and is revealed briefly at the start. Press M to turn the music on or off. The layout changes every game.';
+const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. A fainted friend shows a grey heart: keep a flashlight on them to fill it red and revive them (10 seconds with one light, faster with more).<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Windows flicker just before lightning shines through them. The light travels in straight lines until a wall or furniture blocks it, and a ghost caught in it is revealed to every hunter for a few seconds. A flashlight beam briefly stuns the ghost, and the ghost can drag a hunter it just made faint a short way. Your beam gets shorter and dimmer as the battery drains, and batteries keep respawning around the map. Hunters can always see each other and each other’s flashlights. The ghost starts in the middle of the map and is revealed briefly at the start. Press M to turn the music and sounds on or off. The layout changes every game.';
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
@@ -51,7 +51,9 @@ const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[t
 let WN=[[],[],[],[]],STRP=[[],[],[],[]];
 function lg(c,s,x,y,w,h,a,b){const g=s==0?c.createLinearGradient(x,y,x,y+h):s==2?c.createLinearGradient(x,y+h,x,y):s==3?c.createLinearGradient(x,y,x+w,y):c.createLinearGradient(x+w,y,x,y);g.addColorStop(0,a);g.addColorStop(1,b);return g}
 const angd=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
-function cone(h){const p=[[h.x,h.y]];for(let i=0;i<=36;i++){const a=h.ang-HALF+2*HALF*i/36,cx=Math.cos(a),cy=Math.sin(a);let d=0;while(d<RANGE&&!wall(h.x+cx*d,h.y+cy*d))d+=6;p.push([h.x+cx*d,h.y+cy*d])}return p}
+// beam length and strength shrink with the battery (power 1.0 full .. 0.35 nearly empty)
+const power=h=>.35+.65*Math.max(0,Math.min(100,h.bat==null?100:h.bat))/100;
+function cone(h){const Rg=RANGE*power(h),p=[[h.x,h.y]];for(let i=0;i<=36;i++){const a=h.ang-HALF+2*HALF*i/36,cx=Math.cos(a),cy=Math.sin(a);let d=0;while(d<Rg&&!wall(h.x+cx*d,h.y+cy*d))d+=6;p.push([h.x+cx*d,h.y+cy*d])}return p}
 function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
 function buildMap(rows,seed){
  grid=rows.map(r=>[...r].map(Number));H=grid.length;W=grid[0].length;PW=W*T;PH=H*T;
@@ -128,17 +130,32 @@ ws.onmessage=e=>{const m=JSON.parse(e.data);
  if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd)}
  else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
- else if(m.t=='s'){S=m;
-  for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.id=h[0]}
+ else if(m.t=='s'){const pS=S;sfxScan(pS,m);S=m;
+  for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.bat=h[7];d.id=h[0]}
   if(m.g){if(!DG.vis){DG.x=m.g[0];DG.y=m.g[1]}DG.tx=m.g[0];DG.ty=m.g[1];DG.vis=1}else DG.vis=0}};
 ws.onclose=()=>{$('menu').style.display='flex';$('mc').innerHTML='<h1>Disconnected</h1><p>Reload the page to reconnect.</p>'};
 // Background music: a 64s loop played with Web Audio so copies can overlap and cross-fade (no gap at the loop point)
-const MUS={ctx:null,master:null,buf:null,on:false,running:false,src:[],timer:0,vol:.4,muted:false},XF=3;
+const MUS={ctx:null,master:null,sfx:null,buf:null,on:false,running:false,src:[],timer:0,vol:.4,muted:false,cur:Math.floor(Math.random()*3)-1,bufs:{},bolt:0,held:false,dd:false},XF=3;
+const TRACKS=['spooky-loop','spooky-music-box','spooky-pulse'],SFXB={};
 try{MUS.muted=localStorage.getItem('gh_mute')=='1'}catch(e){}
+const dec=u=>fetch(u).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,no)=>MUS.ctx.decodeAudioData(b,ok,no)));
 function musInit(){
  if(MUS.ctx)return;
  try{const C=window.AudioContext||window.webkitAudioContext;MUS.ctx=new C();MUS.master=MUS.ctx.createGain();MUS.master.gain.value=0;MUS.master.connect(MUS.ctx.destination);
-  fetch('/audio/spooky-loop.mp3').then(r=>r.arrayBuffer()).then(b=>new Promise((ok,no)=>MUS.ctx.decodeAudioData(b,ok,no))).then(buf=>{MUS.buf=buf;if(MUS.on)musLoop()}).catch(()=>{})}catch(e){MUS.ctx=null}}
+  MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=.85;MUS.sfx.connect(MUS.ctx.destination);
+  for(const n of['click','dead','powerup','zap','thunder','faint'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
+  if(MUS.on)musLoad()}catch(e){MUS.ctx=null}}
+// load the track chosen for this round (each new round plays the next one), then start looping it
+function musLoad(){const i=MUS.cur,n=TRACKS[i];if(!MUS.ctx)return;
+ (MUS.bufs[n]||(MUS.bufs[n]=dec('/audio/'+n+'.mp3'))).then(b=>{if(MUS.on&&MUS.cur==i){MUS.buf=b;musLoop()}}).catch(()=>{delete MUS.bufs[n]})}
+function sfx(n,v){if(!MUS.ctx||MUS.muted||!SFXB[n])return;const s=MUS.ctx.createBufferSource(),g=MUS.ctx.createGain();s.buffer=SFXB[n];g.gain.value=v==null?1:v;s.connect(g);g.connect(MUS.sfx);s.start()}
+// turns what changed between two snapshots into sound effects
+function sfxScan(p,m){
+ if(m.ph!='play')return;
+ for(const h of m.hs){const d=D[h[0]];if(d&&!d.down&&h[5]){sfx('faint',1);break}}
+ if(p&&p.ph=='play'&&!p.st&&m.st)sfx('zap',.9);
+ if(m.lt&&m.lt[1]>=1.5){if(!MUS.bolt){MUS.bolt=1;sfx('thunder',1)}}else if(!m.lt)MUS.bolt=0;
+ const d=D[me];if(m.role=='hunter'&&p&&d&&(p.pk||[]).some(q=>!m.pk.some(r=>r.x==q.x&&r.y==q.y)&&Math.hypot(q.x-d.x,q.y-d.y)<45))sfx('powerup',.9)}
 function musLoop(){
  const c=MUS.ctx,b=MUS.buf;if(!c||!b||MUS.running)return;MUS.running=true;
  const play=when=>{
@@ -150,7 +167,7 @@ function musLoop(){
   MUS.timer=setTimeout(()=>play(next),Math.max(0,(next-c.currentTime-8)*1000))};
  play(c.currentTime+.05)}
 function musLevel(sec){const c=MUS.ctx;if(!c)return;const g=MUS.master.gain;g.cancelScheduledValues(c.currentTime);g.setValueAtTime(g.value,c.currentTime);g.linearRampToValueAtTime(MUS.on&&!MUS.muted?MUS.vol:0,c.currentTime+sec)}
-function musStart(){MUS.on=true;musInit();if(!MUS.ctx)return;if(MUS.ctx.resume)MUS.ctx.resume();musLevel(2);if(MUS.buf)musLoop()}
+function musStart(){if(!MUS.on){MUS.cur=(MUS.cur+1)%TRACKS.length;MUS.buf=null}MUS.on=true;musInit();if(!MUS.ctx)return;if(MUS.ctx.resume)MUS.ctx.resume();musLevel(2);if(!MUS.buf)musLoad();else musLoop()}
 function musStop(){
  MUS.on=false;clearTimeout(MUS.timer);MUS.running=false;if(!MUS.ctx)return;musLevel(1.5);
  setTimeout(()=>{if(!MUS.on){MUS.src.forEach(s=>{try{s.stop()}catch(e){}});MUS.src=[]}},1700)}
@@ -181,6 +198,9 @@ cv.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',
 const K=(a,b)=>keys[a]||keys[b];
 setInterval(()=>{if(!me||!S||ph!='play'||ws.readyState!=1)return;
  const my=D[me]||{x:0,y:0};
+ const want=!!(mouse.down||keys[' ']),hun=S.role=='hunter'&&!(D[me]&&D[me].down); // flashlight click when switched on, low buzz when the battery is empty
+ if(hun&&want){if(!MUS.held){if(S.bat>0){sfx('click');MUS.dd=false}else{sfx('dead');MUS.dd=true}}else if(S.bat<=0&&!MUS.dd){sfx('dead');MUS.dd=true}}
+ MUS.held=want&&hun;
  ws.send(JSON.stringify({t:'in',kx:(K('d','arrowright')?1:0)-(K('a','arrowleft')?1:0),ky:(K('s','arrowdown')?1:0)-(K('w','arrowup')?1:0),
   ang:Math.atan2(mouse.y-my.y,mouse.x-my.x),on:mouse.down||keys[' '],dash:keys.shift,ch:keys.e}))},33);
 
@@ -206,29 +226,31 @@ function draw(dt){
  DG.x+=(DG.tx-DG.x)*k;DG.y+=(DG.ty-DG.y)*k;
  sc=Math.min(vw/PW,(vh-top)/PH);ox=(vw-PW*sc)/2;oy=top+(vh-top-PH*sc)/2;
  ctx.setTransform(d*sc,0,0,d*sc,d*ox,d*oy);ctx.drawImage(base,0,0);
- const lt=S.lt,act=!!lt&&lt[1]>=1.5&&lt[1]<2.7,warn=!!lt&&lt[1]<1.5,hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]),el=180-S.time;
- if(!hv)for(const h of hs)if(h.on&&!h.down){ctx.fillStyle='rgba(255,236,150,.22)';ctx.beginPath();cone(h).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
- ctx.font='11px Georgia';ctx.textAlign='center';
- for(const h of hs){
-  ctx.fillStyle=h.down?'#6b6684':`hsl(${h.id*47%360} 70% 62%)`;ctx.beginPath();ctx.arc(h.x,h.y,10,0,7);ctx.fill();
-  if(!h.down){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(h.x+Math.cos(h.ang)*6,h.y+Math.sin(h.ang)*6,3.5,0,7);ctx.fill()}
-  if(h.id==me){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(h.x,h.y,14,0,7);ctx.stroke()}}
+ const lt=S.lt,act=!!lt&&lt[1]>=1.5&&lt[1]<2.7,warn=!!lt&&lt[1]<1.5,hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]),el=180-S.time,
+  lit=el<5?1:Math.max(0,1-(el-5)/.5)*(Math.sin(el*50)>-.2?1:.3); // the whole mansion is lit for the first 5s, then the lights go out with a flicker
+ for(const h of hs)if(h.on&&!h.down){ctx.fillStyle=`rgba(255,236,150,${.22*power(h)})`;ctx.beginPath();cone(h).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
  if(hv&&my){
-  fc.globalCompositeOperation='source-over';fc.fillStyle=act?'rgba(6,5,14,.9)':'rgba(6,5,14,.95)';fc.fillRect(0,0,PW,PH);
+  fc.globalCompositeOperation='source-over';fc.fillStyle=`rgba(6,5,14,${(act?.9:.95)*(1-lit)})`;fc.fillRect(0,0,PW,PH);
   fc.globalCompositeOperation='destination-out';
   const glow=(x,y,r)=>{const gr=fc.createRadialGradient(x,y,0,x,y,r);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,0)');fc.fillStyle=gr;fc.beginPath();fc.arc(x,y,r,0,7);fc.fill()};
   glow(my.x,my.y,70);
-  for(const h of hs){if(h!==my)glow(h.x,h.y,el<4.5?60:22);
-   if(h.on&&!h.down){const gr=fc.createRadialGradient(h.x,h.y,0,h.x,h.y,RANGE);gr.addColorStop(0,'rgba(0,0,0,1)');gr.addColorStop(1,'rgba(0,0,0,.25)');fc.fillStyle=gr;fc.beginPath();cone(h).forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}}
+  for(const h of hs){if(h!==my)glow(h.x,h.y,22);
+   if(h.on&&!h.down){const pwr=power(h),gr=fc.createRadialGradient(h.x,h.y,0,h.x,h.y,RANGE*pwr);gr.addColorStop(0,`rgba(0,0,0,${pwr})`);gr.addColorStop(1,`rgba(0,0,0,${.25*pwr})`);fc.fillStyle=gr;fc.beginPath();cone(h).forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}}
   if(act)for(const[x,y,w,h]of STRP[lt[0]]){fc.fillStyle=lg(fc,lt[0],x,y,w,h,'rgba(0,0,0,.95)','rgba(0,0,0,.45)');fc.fillRect(x,y,w,h)}
   ctx.drawImage(fog,0,0);ctx.globalAlpha=.6;ctx.drawImage(edges,0,0);ctx.globalAlpha=1;
   if(S.near){ctx.font='bold 26px Georgia';ctx.textAlign='center';ctx.fillStyle=S.near==2?'#ff6b8b':'#ffd25a';ctx.fillText(S.near==2?'!':'?',my.x,my.y-24)}}
  // always visible (drawn over the fog): batteries, hearts over fainted hunters, the revealed ghost, start-of-round name tags
  for(const p of S.pk){const pl=.6+.4*Math.sin(Date.now()/250);ctx.fillStyle=`rgba(124,242,160,${.2*pl})`;ctx.beginPath();ctx.arc(p.x,p.y,19,0,7);ctx.fill();
   ctx.fillStyle='#7cf2a0';ctx.fillRect(p.x-6,p.y-9,12,18);ctx.fillStyle='#0b3a22';ctx.fillRect(p.x-3,p.y-12,6,3);ctx.fillRect(p.x-2,p.y-4,4,8)}
+ // every hunter can always see all the other hunters
+ ctx.font='11px Georgia';ctx.textAlign='center';
+ for(const h of hs){
+  ctx.fillStyle=h.down?'#6b6684':`hsl(${h.id*47%360} 70% 62%)`;ctx.beginPath();ctx.arc(h.x,h.y,10,0,7);ctx.fill();
+  if(!h.down){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(h.x+Math.cos(h.ang)*6,h.y+Math.sin(h.ang)*6,3.5,0,7);ctx.fill()}
+  if(h.id==me){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(h.x,h.y,14,0,7);ctx.stroke()}}
  for(const h of hs)if(h.down)heart(h.x+18,h.y-22,13,h.rev);
  if(DG.vis){const gl=ctx.createRadialGradient(DG.x,DG.y,2,DG.x,DG.y,30);gl.addColorStop(0,'rgba(255,210,90,.45)');gl.addColorStop(1,'rgba(255,210,90,0)');ctx.fillStyle=gl;ctx.beginPath();ctx.arc(DG.x,DG.y,30,0,7);ctx.fill();ghostShape(DG.x,DG.y)}
- if(S.ph=='play'&&el<4.5){const a=Math.max(0,Math.min(1,4.5-el));ctx.globalAlpha=a;ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.fillStyle='#ece9fa';
+ if(S.ph=='play'&&el<5){const a=Math.max(0,Math.min(1,5-el));ctx.globalAlpha=a;ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.fillStyle='#ece9fa';
   for(const h of hs){const n=names[h.id]||'';ctx.strokeText(n,h.x,h.y+27);ctx.fillText(n,h.x,h.y+27)}
   if(DG.vis&&names[S.gid]){ctx.strokeText(names[S.gid],DG.x,DG.y+28);ctx.fillText(names[S.gid],DG.x,DG.y+28)}
   ctx.globalAlpha=1}
