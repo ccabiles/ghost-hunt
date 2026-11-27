@@ -66,10 +66,10 @@ function begin(){
  genMap();for(const p of act)send(p,mapMsg());
  // players who chose Ghost take turns haunting; if nobody did, everyone takes turns
  const vol=act.filter(p=>p.pref=='g'),pool=vol.length?vol:act,gp=pool.find(p=>p.id>lastG)||pool[0];lastG=gp.id;
- const gid=gp.id,n=act.length-1,[gx,gy]=tc(pick(([x,y])=>x>30&&y>15)),hp=80+14*n;
- R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:5,al:null,K:Math.min(6,Math.max(3,Math.ceil(n/3))),g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:0,fcd:0}};
+ const gid=gp.id,n=act.length-1,[gx,gy]=tc(FL.reduce((a,b)=>Math.hypot(b[0]*T+T/2-W*T/2,b[1]*T+T/2-H*T/2)<Math.hypot(a[0]*T+T/2-W*T/2,a[1]*T+T/2-H*T/2)?b:a)),hp=80+14*n;
+ R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:5,al:null,K:Math.min(6,Math.max(3,Math.ceil(n/3))),g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:5,fcd:0}}; // the ghost starts in the middle of the map, visible for 5s
  for(let i=0;i<R.K;i++){const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}
- for(const p of P.values()){p.rd=!p.away;p.down=false;p.rev=0;p.bat=100;p.on=false;p.revs=0;p.drag=0;if(p.rd&&p.id!=gid)[p.x,p.y]=tc(pick(([x])=>x<20))}
+ for(const p of P.values()){p.rd=!p.away;p.down=false;p.rev=0;p.bat=100;p.on=false;p.revs=0;p.drag=0;if(p.rd&&p.id!=gid)[p.x,p.y]=tc(pick(([x,y])=>Math.hypot(x*T+T/2-gx,y*T+T/2-gy)>260))}
  ph='play';msg='';lobby()}
 
 // after the last round of a match everyone sees the awards, then each player presses Return to Lobby
@@ -91,7 +91,7 @@ function snap(){
   const isG=p.id==R.gid,ob=isG||!p.rd||all,d=ob?9999:dist(p,g);
   // the ghost's position is only sent when this player is allowed to see it
   send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||g.vis>0)?[g.x|0,g.y|0]:null,
-   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
+   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,gid:R.gid,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
 
 setInterval(()=>{
  if(ph!='play')return;
@@ -100,14 +100,14 @@ setInterval(()=>{
  R.time-=dt;R.ring=Math.max(0,R.ring-dt);if(R.al&&(R.al.t-=dt)<=0)R.al=null;
  // lightning: 1.5s of flickering windows as a warning, then 1.2s of light through that side's windows
  if(R.lt){R.lt.t+=dt;
-  if(R.lt.t>=1.5&&R.lt.t<2.7&&!R.lt.hit&&inStrip(R.lt.s,g)){R.lt.hit=1;g.stun=3;g.vis=5}
+  if(R.lt.t>=1.5&&R.lt.t<2.7&&!R.lt.hit&&inStrip(R.lt.s,g)){R.lt.hit=1;g.vis=Math.max(g.vis,4)} // lightning reveals the ghost to every hunter for 4s (no stun)
   if(R.lt.t>=2.7)R.lt=null}
  else{R.nf-=dt;if(R.nf<=0){R.lt={s:Math.random()*4|0,t:0,hit:0};R.nf=14+Math.random()*10}}
  for(const h of hs){
-  if(h.down){h.rev=Math.max(0,h.rev-.3*dt);continue}
+  if(h.down){if(!h.rbeam)h.rev=Math.max(0,h.rev-.1*dt);h.rbeam=0;continue}
   const i=h.in,l=Math.hypot(i.kx,i.ky)||1;
   move(h,i.kx/l*105*dt,i.ky/l*105*dt);h.ang=i.ang;h.on=!!i.on&&h.bat>0;
-  if(h.on){h.bat-=12*dt;if(h.bat<=0){h.bat=0;h.on=false}}
+  if(h.on){h.bat-=100/30*dt;if(h.bat<=0){h.bat=0;h.on=false}}
   for(let k=R.pk.length-1;k>=0;k--)if(dist(h,R.pk[k])<18){h.bat=Math.min(100,h.bat+60);R.pk.splice(k,1)}}
  if(R.pk.length<R.K){R.spawn-=dt;if(R.spawn<=0){R.spawn=5;const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}}else R.spawn=5;
  g.stun=Math.max(0,g.stun-dt);g.vis=Math.max(0,g.vis-dt);g.fcd=Math.max(0,g.fcd-dt);
@@ -123,7 +123,7 @@ setInterval(()=>{
  let n=0,chg=false;const hb=[];
  for(const h of hs){if(!h.on||h.down)continue;
   if(hit(h,g)){n++;hb.push(h)}
-  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/2+.3*dt;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);o.drag=0;chg=true;h.revs++;h.st.rv++}}}
+  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/10;o.rbeam=1;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);o.drag=0;chg=true;h.revs++;h.st.rv++}}}
  if(n){const dm=6*Math.pow(n,.75)*dt;g.hp-=dm;for(const h of hb)h.st.dmg+=dm/n;g.lit=.25;if(g.fcd<=0){g.stun=Math.max(g.stun,Math.min(1.2,.5+.15*n));g.fcd=3.5}}else g.lit=Math.max(0,g.lit-dt);
  for(const h of hs)if(!h.down&&dist(h,g)<19){h.down=true;h.on=false;h.rev=0;h.drag=2.5;h.dragd=192;chg=true;h.st.fa++}
  if(chg)R.al={n:hs.filter(h=>!h.down).length,t:3};
@@ -136,6 +136,9 @@ setInterval(()=>{
 const IMG=/\.(jpe?g|png|webp|gif)$/i,MIME={'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.gif':'image/gif'};
 const srv=http.createServer((q,s)=>{
  const u=(q.url||'/').split('?')[0];
+ if(u.startsWith('/audio/')){
+  const f=path.join(__dirname,'audio',path.basename(decodeURIComponent(u)));
+  fs.readFile(f,(e,d)=>{if(e||!/\.mp3$/i.test(f)){s.statusCode=404;return s.end('Not found')}s.setHeader('Content-Type','audio/mpeg');s.setHeader('Cache-Control','public, max-age=86400');s.end(d)});return}
  if(u=='/logo.webp'){
   fs.readFile(path.join(__dirname,'logo.webp'),(e,d)=>{if(e){s.statusCode=404;return s.end('Not found')}s.setHeader('Content-Type','image/webp');s.setHeader('Cache-Control','public, max-age=86400');s.end(d)});return}
  if(u=='/api/splash'){
