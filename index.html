@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <title>Ghost Hunt</title>
 <style>
 :root{--bg:#0b0a14;--ink:#ece9fa;--mut:#9b95bb;--acc:#ffd25a;--pnl:#1b1832;color-scheme:dark}
@@ -52,6 +52,28 @@ details{max-width:640px;width:100%}
 .foot{flex-direction:row;justify-content:space-around;align-items:center;flex-wrap:wrap}
 .foot span{display:inline-flex;align-items:center;gap:6px}.foot small{margin:0}
 @media(max-width:560px){.guide{grid-template-columns:1fr}}
+.modes{max-width:640px;width:100%}
+.mh{display:block;color:var(--acc);font-weight:normal;margin-bottom:6px}
+.mrow{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.mc{display:flex;gap:10px;align-items:center;text-align:left;padding:10px 14px;border-radius:10px;font-size:15px;border:2px solid #3a3560;background:var(--pnl);color:var(--ink);line-height:1.3}
+button.mc{cursor:pointer}.mc small{color:var(--mut);font-size:12.5px}.mc .mi{font-size:26px}
+.mc.sel{border-color:var(--acc);background:#2a2548;color:var(--ink)}button.mc.sel:hover,button.mc.sel:focus-visible{background:#2a2548;color:var(--ink)}
+button.mc:hover:not(.sel){background:#26224a;color:var(--ink)}
+.mn{color:var(--mut)}
+.stand{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;max-width:560px}.stand span{padding:3px 10px;border:1px solid #3a3560;border-radius:12px;background:var(--pnl);font-size:14px}.stand b{color:var(--acc)}
+@media(max-width:560px){.mrow{grid-template-columns:1fr}}
+html{touch-action:manipulation}
+#tc{position:fixed;inset:0;z-index:5;display:none;pointer-events:none;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:none}
+.tz{position:absolute;top:64px;bottom:0;pointer-events:auto;touch-action:none}
+#tl{left:0;width:50%}#tr{right:0;width:50%}
+.sb{position:fixed;display:none;width:108px;height:108px;border-radius:50%;border:3px solid rgba(255,210,90,.55);background:rgba(27,24,50,.35);pointer-events:none;box-sizing:border-box}
+.sb>i{position:absolute;left:34px;top:34px;width:34px;height:34px;border-radius:50%;background:rgba(255,210,90,.75);box-shadow:0 0 12px rgba(255,210,90,.6)}
+#tg{position:absolute;right:max(18px,env(safe-area-inset-right));bottom:max(20px,env(safe-area-inset-bottom));display:none;flex-direction:column;gap:14px;pointer-events:auto}
+#tg button{width:96px;height:96px;border-radius:50%;font-size:16px;font-weight:bold;padding:0;background:rgba(27,24,50,.7);touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
+#tg button small{font-size:11px;font-weight:normal;opacity:.8}
+#tg button.dn{background:var(--acc);color:#1a1530}
+#rot{position:absolute;inset:0;background:rgba(11,10,20,.96);color:var(--acc);font-size:22px;align-items:center;justify-content:center;text-align:center;padding:30px;pointer-events:auto;display:none}
+@media(pointer:coarse){#leave{padding:8px 12px;font-size:15px}#mute{left:92px;padding:6px 10px}button,input{font-size:18px}}
 </style></head><body>
 <div id="splash" role="button" tabindex="0" aria-label="Play now"><img id="splimg" alt="Ghost Hunt: click to play"></div>
 <canvas id="c"></canvas><button id="leave">Leave</button><button id="mute" title="Music on/off (M)" aria-label="Music on or off">🔊</button><img id="hudlogo" src="/logo.webp" alt="Ghost Hunt">
@@ -59,11 +81,13 @@ details{max-width:640px;width:100%}
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const CONTROLS='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg><em>or</em><svg class="ic" viewBox="0 0 60 44" width="52" height="38"><rect x="2" y="2" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><line x1="2" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="16" r="6" fill="#ffd25a"/></svg><small>aim</small></div><div class="ct"><i class="k  wide">Space</i><em>or</em><span class="clk"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg></span><small>hold = 🔦 light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><i class="k  wide">Shift</i><small>dash</small></div><div class="ct"><span class="hold">hold</span><i class="k">E</i><small>drain batteries</small></div></div><div class="gc wide foot"><span><i class="k">M</i> <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div>';
+const TOUCH=matchMedia('(pointer:coarse)').matches,CK='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg><em>or</em><svg class="ic" viewBox="0 0 60 44" width="52" height="38"><rect x="2" y="2" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><line x1="2" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="16" r="6" fill="#ffd25a"/></svg><small>aim</small></div><div class="ct"><i class="k  wide">Space</i><em>or</em><span class="clk"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg></span><small>hold = 🔦 light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><i class="k  wide">Shift</i><small>dash</small></div><div class="ct"><span class="hold">hold</span><i class="k">E</i><small>drain batteries</small></div></div><div class="gc wide foot"><span><i class="k">M</i> <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div>';
+const CT='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>left thumb</em><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>right thumb</em><small>aim + hold = light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>left thumb</em><small>move</small></div><div class="ct"><i class="k wide">DASH</i><small>tap</small></div><div class="ct"><i class="k wide">MAGIC</i><small>hold, then let go</small></div></div><div class="gc wide foot"><span>🔊 <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div></div>';
+const CONTROLS=TOUCH?CT:CK;
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
-let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,mp=0,aw=null,awT=0,help=false;
+let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,rn=5,rd=[0,5],md='c',gm='c',mp=0,aw=null,awT=0,help=false;
 let live=true;
 const ws=(()=>{try{if(!/^https?:$/.test(location.protocol)||!location.host)throw 0;return new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host)}catch(e){live=false;return{readyState:0,send(){}}}})();
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
@@ -123,32 +147,37 @@ function menu(){
  M.style.display='flex';
  if(!me){m.innerHTML=CONTROLS+'<div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
   $('jn').onclick=join;$('nm').onkeydown=e=>{if(e.key=='Enter')join()};return}
- const mine=(scores.find(p=>p[0]==me)||[])[2]=='g'?'g':'h',score=`Ghost ${ms[0]} – ${ms[1]} Hunters (first to ${ms[2]} rounds)`;
+ const mine=(scores.find(p=>p[0]==me)||[])[2]=='g'?'g':'h',score=md=='r'?`Round ${Math.min(rd[0]+1,rd[1])} of ${rd[1]}`:`Ghost ${ms[0]} – ${ms[1]} Hunters (first to ${ms[2]} rounds)`;
  if(ph=='over'){
   m.innerHTML=`<h1>${esc(msg)}</h1><p><b>${score}</b></p><p>${fin?'<b>'+esc(fin)+'</b> Match awards next…':'The next round starts shortly.'}</p>`;return}
  if(ph=='awards'){
   if(!awT)awT=Date.now();const el=(Date.now()-awT)/1000;
   const card=(i,ico,title,a,unit)=>`<div class="aw" style="animation-delay:${Math.max(0,.4+i*1.1-el)}s"><div class="ico">${ico}</div><div><b>${title}</b><br>${a?esc(a[0])+' · '+a[1]+' '+unit:'Nobody this match'}</div></div>`;
-  m.innerHTML=`<h1>Match awards</h1><p><b>${esc(fin)}</b></p><div class="awards">${card(0,'🔦','Best Hunter',aw&&aw.bh,'damage to the ghost')}${card(1,'🙀','Scaredy Cat',aw&&aw.sc,'times fainted')}${card(2,'💡','Light Saver',aw&&aw.ls,'revives')}</div>${el>=3.9?'<button id="back" class="aw" style="animation-delay:0s">Return to Lobby</button>':''}`;
+  m.innerHTML=`<h1>Match awards</h1><p><b>${esc(fin)}</b></p>${md=='r'?`<div class="stand">${[...scores].sort((a,b)=>(b[4]||0)-(a[4]||0)).map(p=>`<span>${esc(p[1])} <b>${p[4]||0}</b></span>`).join('')}</div>`:''}<div class="awards">${card(0,'🔦','Best Hunter',aw&&aw.bh,'damage to the ghost')}${card(1,'🙀','Scaredy Cat',aw&&aw.sc,'times fainted')}${card(2,'💡','Light Saver',aw&&aw.ls,'revives')}</div>${el>=3.9?'<button id="back" class="aw" style="animation-delay:0s">Return to Lobby</button>':''}`;
   if(el<3.9)setTimeout(menu,(3.9-el)*1000+60);
   if($('back'))$('back').onclick=()=>ws.send('{"t":"back"}');
   return}
- const list=scores.map(p=>`<li>${esc(p[1])}${p[0]==me?' (you)':''}<span class="chip">${p[2]=='g'?'wants to be the ghost':'hunter'}</span></li>`).join('');
- const roles=`<div class="row"><button id="rg" class="${mine=='g'?'sel':''}">I’ll be the ghost</button><button id="rh" class="${mine=='h'?'sel':''}">I’ll be a hunter</button></div><p>Players who choose ghost take turns haunting, and everyone else hunts. If nobody picks ghost, everyone takes a turn.</p>`;
+ const list=scores.map(p=>`<li>${esc(p[1])}${p[0]==me?' (you)':''}${gm=='r'?'':`<span class="chip">${p[2]=='g'?'wants to be the ghost':'hunter'}</span>`}</li>`).join('');
+ const roleBtns=`<div class="row"><button id="rg" class="${mine=='g'?'sel':''}">I’ll be the ghost</button><button id="rh" class="${mine=='h'?'sel':''}">I’ll be a hunter</button></div><p>Players who choose ghost take turns haunting, and everyone else hunts. If nobody picks ghost, everyone takes a turn.</p>`;
+ const modeCards=`<div class="modes"><b class="mh">Game mode</b><div class="mrow">${[['r','🎲','Mode 1','Random turns','Everyone takes a turn as the ghost, picked at random'],['c','🎯','Mode 2','Choose your role','Each player picks ghost or hunter']].map(([k,i,n,t,d])=>`<${host==me?'button':'div'} class="mc${gm==k?' sel':''}" data-gm="${k}"><span class="mi">${i}</span><span><b>${n}: ${t}</b><br><small>${d}</small></span></${host==me?'button':'div'}>`).join('')}</div>${host==me?'':'<small class="mn">The host picks the mode.</small>'}</div>`;
+ const roles=gm=='r'?`<p>Random mode: you’ll all take turns being the ghost.</p>`:roleBtns;
  if(mp){m.innerHTML=`<h1>Waiting room</h1><p>${mp==2?'The match is over. Other players are still viewing the results, and the lobby opens as soon as everyone is back.':`A match is in progress (${score}). You’ll be back with everyone when this one ends.`} You can change your role for the next match.</p>${roles}<ol>${list}</ol>`}
  else{
-  const len=host==me?`<div class="row">${[1,3,5,7].map(v=>`<button data-bo="${v}" class="${bo==v?'sel':''}">${v==1?'Quick game':'Best of '+v}</button>`).join('')}</div>`:`<p>Match: ${bo==1?'quick game (1 round)':'best of '+bo+' (first to '+(bo+1)/2+' rounds)'}</p>`;
-  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${roles}<ol>${list}</ol>${len}`+
-   (host==me?`<button id="go" ${scores.length<2?'disabled':''}>Start the match</button>`:'<p>Waiting for the host to start…</p>')}
+  const len=host==me?(gm=='r'?`<div class="row">${[3,5,7,10].map(v=>`<button data-rn="${v}" class="${rn==v?'sel':''}">${v} rounds</button>`).join('')}</div>`:`<div class="row">${[1,3,5,7].map(v=>`<button data-bo="${v}" class="${bo==v?'sel':''}">${v==1?'Quick game':'Best of '+v}</button>`).join('')}</div>`):`<p>Match: ${gm=='r'?rn+' rounds, most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+(bo+1)/2+' rounds)'}</p>`;
+  const noG=gm=='c'&&!scores.some(p=>!p[3]&&p[2]=='g');
+  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${modeCards}${roles}<ol>${list}</ol>${len}`+
+   (host==me?`<button id="go" ${scores.length<2||noG?'disabled':''}>Start the match</button>${noG&&scores.length>1?'<p>Someone needs to choose “I’ll be the ghost” before the match can start.</p>':''}`:'<p>Waiting for the host to start…</p>')}
  const dt=m.querySelector('details');if(dt)dt.ontoggle=()=>{help=dt.open};
+ m.querySelectorAll('button[data-gm]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'gm',v:b.dataset.gm})));
  if($('rg'))$('rg').onclick=()=>ws.send('{"t":"role","v":"g"}');
  if($('rh'))$('rh').onclick=()=>ws.send('{"t":"role","v":"h"}');
+ m.querySelectorAll('[data-rn]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'rn',v:+b.dataset.rn})));
  m.querySelectorAll('[data-bo]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'bo',v:+b.dataset.bo})));
  if($('go'))$('go').onclick=()=>ws.send('{"t":"start"}')}
 function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
 ws.onmessage=e=>{const m=JSON.parse(e.data);
  if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd)}
- else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
+ else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'c';gm=m.gm||'c';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
  else if(m.t=='s'){const pS=S;sfxScan(pS,m);S=m;
   for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.bat=h[7];d.sup=h[8]||0;d.id=h[0]}
@@ -219,13 +248,37 @@ addEventListener('blur',()=>{for(const k in keys)keys[k]=false;mouse.down=false}
 cv.addEventListener('mousemove',e=>{mouse.x=(e.clientX-ox)/sc;mouse.y=(e.clientY-oy)/sc});
 cv.addEventListener('mousedown',()=>mouse.down=true);addEventListener('mouseup',()=>mouse.down=false);
 const K=(a,b)=>keys[a]||keys[b];
+const tk={kx:0,ky:0,ang:0,aim:false,on:false,dash:false,ch:false};
 setInterval(()=>{if(!me||!S||ph!='play'||ws.readyState!=1)return;
  const my=D[me]||{x:0,y:0};
- const want=!!(mouse.down||keys[' ']),hun=S.role=='hunter'&&!(D[me]&&D[me].down); // flashlight click when switched on, low buzz when the battery is empty
+ const want=!!(mouse.down||keys[' ']||tk.on),hun=S.role=='hunter'&&!(D[me]&&D[me].down); // flashlight click when switched on, low buzz when the battery is empty
  if(hun&&want){if(!MUS.held){if(S.bat>0){sfx('click');MUS.dd=false}else{sfx('dead');MUS.dd=true}}else if(S.bat<=0&&!MUS.dd){sfx('dead');MUS.dd=true}}
  MUS.held=want&&hun;
- ws.send(JSON.stringify({t:'in',kx:(K('d','arrowright')?1:0)-(K('a','arrowleft')?1:0),ky:(K('s','arrowdown')?1:0)-(K('w','arrowup')?1:0),
-  ang:Math.atan2(mouse.y-my.y,mouse.x-my.x),on:mouse.down||keys[' '],dash:keys.shift,ch:keys.e}))},33);
+ const cl=v=>Math.max(-1,Math.min(1,v));
+ if(TOUCH&&!tk.aim&&(tk.kx||tk.ky))tk.ang=Math.atan2(tk.ky,tk.kx); // no aim finger: face where you walk
+ ws.send(JSON.stringify({t:'in',kx:cl((K('d','arrowright')?1:0)-(K('a','arrowleft')?1:0)+tk.kx),ky:cl((K('s','arrowdown')?1:0)-(K('w','arrowup')?1:0)+tk.ky),
+  ang:TOUCH?tk.ang:Math.atan2(mouse.y-my.y,mouse.x-my.x),on:mouse.down||keys[' ']||tk.on,dash:keys.shift||tk.dash,ch:keys.e||tk.ch}))},33);
+
+// ---- touch controls (phones/tablets): left thumb = move, right thumb = aim + light (hunter) or DASH / MAGIC buttons (ghost)
+if(TOUCH){
+ const o=document.createElement('div');o.id='tc';
+ o.innerHTML='<div id="tl" class="tz"></div><div id="tr" class="tz"></div><div id="tg"><button id="tdash">DASH</button><button id="tmag">MAGIC<small>hold</small></button></div><div id="rot">Rotate your phone sideways ↻</div><i class="sb" id="sl"><i></i></i><i class="sb" id="sr"><i></i></i>';
+ document.body.appendChild(o);
+ const R=54;
+ function stick(zone,base,fn,end){let id=null,ox0=0,oy0=0;const kn=base.firstChild;
+  zone.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;zone.setPointerCapture(id);ox0=e.clientX;oy0=e.clientY;base.style.cssText=`display:block;left:${ox0-54}px;top:${oy0-54}px`;kn.style.transform='translate(0,0)';fn(0,0,0);e.preventDefault()});
+  zone.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;let dx=e.clientX-ox0,dy=e.clientY-oy0;const l=Math.hypot(dx,dy),m=Math.min(1,l/R);const ux=l?dx/l:0,uy=l?dy/l:0;if(l>R){dx=ux*R;dy=uy*R}kn.style.transform=`translate(${dx}px,${dy}px)`;fn(ux,uy,m)});
+  const up=e=>{if(e.pointerId!==id)return;id=null;base.style.display='none';end()};
+  zone.addEventListener('pointerup',up);zone.addEventListener('pointercancel',up)}
+ stick($('tl'),$('sl'),(x,y,m)=>{if(m>.22){tk.kx=x;tk.ky=y}else{tk.kx=tk.ky=0}},()=>{tk.kx=tk.ky=0});
+ stick($('tr'),$('sr'),(x,y,m)=>{tk.aim=true;tk.on=true;if(m>.15)tk.ang=Math.atan2(y,x)},()=>{tk.aim=false;tk.on=false});
+ const hold=(el,k)=>{el.addEventListener('pointerdown',e=>{tk[k]=true;el.classList.add('dn');e.preventDefault()});const up=()=>{tk[k]=false;el.classList.remove('dn')};el.addEventListener('pointerup',up);el.addEventListener('pointercancel',up);el.addEventListener('pointerleave',up)};
+ hold($('tdash'),'dash');hold($('tmag'),'ch');
+ for(const ev of['contextmenu','selectstart','gesturestart'])document.addEventListener(ev,e=>{if(ph=='play')e.preventDefault()});
+ setInterval(()=>{const on=ph=='play'&&me&&S&&(S.role=='hunter'||S.role=='ghost');o.style.display=on?'block':'none';
+  if(!on){tk.kx=tk.ky=0;tk.aim=tk.on=tk.dash=tk.ch=false;return}
+  const g=S.role=='ghost';$('tr').style.display=g?'none':'block';$('tg').style.display=g?'flex':'none';
+  $('rot').style.display=innerHeight>innerWidth?'flex':'none'},150)}
 
 // a fainted hunter's heart: grey, and it fills red from the bottom as the revive progresses (p = 0..1)
 function heart(x,y,s,p){
@@ -249,7 +302,7 @@ function draw(dt){
  DG.x+=(DG.tx-DG.x)*k;DG.y+=(DG.ty-DG.y)*k;
  sc=Math.min(vw/PW,(vh-top)/PH);ox=(vw-PW*sc)/2;oy=top+(vh-top-PH*sc)/2;
  ctx.setTransform(d*sc,0,0,d*sc,d*ox,d*oy);ctx.drawImage(base,0,0);
- const lt=S.lt,act=!!lt&&lt[1]>=1.5&&lt[1]<2.7,warn=!!lt&&lt[1]<1.5,hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]),el=180-S.time,
+ const lt=S.lt,act=!!lt&&lt[1]>=1.5&&lt[1]<2.7,warn=!!lt&&lt[1]<1.5,hv=S.role=='hunter'&&S.ph=='play',my=D[me],hs=S.hs.map(h=>D[h[0]]).filter(Boolean),el=180-S.time,
   lit=el<5?1:Math.max(0,1-(el-5)/.5)*(Math.sin(el*50)>-.2?1:.3); // the whole mansion is lit for the first 5s, then the lights go out with a flicker
  for(const h of hs)if(h.on&&!h.down){ctx.fillStyle=h.sup>0?`rgba(150,200,255,${.28*power(h)})`:`rgba(255,236,150,${.22*power(h)})`;ctx.beginPath();cone(h).forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
  if(hv&&my){
@@ -290,10 +343,16 @@ function draw(dt){
  if(S.al&&S.al[0]>0){const[n,t]=S.al,a=Math.min(1,t/.6);ctx.fillStyle=`rgba(20,8,24,${.75*a})`;ctx.fillRect(0,vh*.36,vw,72);
   ctx.fillStyle=`rgba(255,107,139,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${n} Hunter${n==1?'':'s'} Left`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
- ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,128,28);ctx.fillStyle='#ffd25a';ctx.fillText(`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,128,50);ctx.fillStyle='#ece9fa';
+ ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,TOUCH?150:128,28);ctx.fillStyle='#ffd25a';ctx.fillText(md=='r'?`Round ${Math.min(rd[0]+1,rd[1])} of ${rd[1]}`:`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,TOUCH?150:128,50);ctx.fillStyle='#ece9fa';
+ if(md=='r'&&scores.length){ // running points tally: one chip per player, top scorers first
+  ctx.font='12px Georgia';ctx.textAlign='left';const rows=[[]],mw=vw-40;let rw=0;
+  const chips=[...scores].filter(p=>!p[3]).sort((a,b)=>(b[4]||0)-(a[4]||0)).map(p=>{const t=`${p[0]==S.gid?'👻 ':''}${p[1]} ${p[4]||0}`;return{p,t,w:ctx.measureText(t).width+16}});
+  for(const ch of chips){if(rw+ch.w+6>mw&&rows[rows.length-1].length){rows.push([]);rw=0}rows[rows.length-1].push(ch);rw+=ch.w+6}
+  rows.forEach((r,ri)=>{let tw=r.reduce((a,c2)=>a+c2.w+6,-6),x=(vw-tw)/2;const y=70+ri*22;
+   for(const ch of r){ctx.fillStyle='rgba(27,24,50,.82)';ctx.strokeStyle=ch.p[0]==me?'#ffd25a':'#3a3560';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(x,y,ch.w,19,9);ctx.fill();ctx.stroke();ctx.fillStyle='#ece9fa';ctx.fillText(ch.t,x+8,y+14);x+=ch.w+6}})}
  bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
  if(S.role=='hunter')bar(vw-220,50,200,Math.min(1,S.bat/(my&&my.sup>0?150:100)),my&&my.sup>0?'#4aa8ff':S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':my&&my.sup>0?`SUPER ${Math.ceil(my.sup)}s  Battery: ${Math.ceil(S.bat*.3)}s`:`Battery: ${Math.ceil(S.bat*.3)}s`);
- else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
+ else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff',(TOUCH?'Magic (hold the button)':'Magic (hold E)'));ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
 </script></body></html>
