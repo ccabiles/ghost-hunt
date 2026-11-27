@@ -1,5 +1,5 @@
 // Ghost Hunt multiplayer server. Run: npm install && node server.js
-const http=require('http'),fs=require('fs'),{WebSocketServer}=require('ws');
+const http=require('http'),fs=require('fs'),path=require('path'),{WebSocketServer}=require('ws');
 const T=32,CW=10,CH=8,W=41,H=25,RANGE=210,HALF=.42,PORT=process.env.PORT||3000,MAXP=15;
 let grid,FL,MAP;
 const rnd=(a,b)=>a+Math.random()*(b-a+1)|0;
@@ -132,7 +132,19 @@ setInterval(()=>{
  else if(R.time<=0)end('Time’s up: the ghost survives!','g');
  else snap()},33);
 
-const srv=http.createServer((q,s)=>{s.setHeader('Content-Type','text/html; charset=utf-8');s.end(fs.readFileSync(__dirname+'/index.html'))});
+// Title screens: any .jpg/.png/.webp you put in the images folder is offered to the page and shown at random
+const IMG=/\.(jpe?g|png|webp|gif)$/i,MIME={'.jpg':'image/jpeg','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp','.gif':'image/gif'};
+const srv=http.createServer((q,s)=>{
+ const u=(q.url||'/').split('?')[0];
+ if(u=='/logo.webp'){
+  fs.readFile(path.join(__dirname,'logo.webp'),(e,d)=>{if(e){s.statusCode=404;return s.end('Not found')}s.setHeader('Content-Type','image/webp');s.setHeader('Cache-Control','public, max-age=86400');s.end(d)});return}
+ if(u=='/api/splash'){
+  fs.readdir(path.join(__dirname,'images'),(e,l)=>{s.setHeader('Content-Type','application/json');s.setHeader('Cache-Control','no-cache');s.end(JSON.stringify(e?[]:l.filter(f=>IMG.test(f)).sort()))});return}
+ if(u.startsWith('/images/')){
+  const f=path.join(__dirname,'images',path.basename(decodeURIComponent(u)));
+  fs.readFile(f,(e,d)=>{if(e||!IMG.test(f)){s.statusCode=404;return s.end('Not found')}
+   s.setHeader('Content-Type',MIME[path.extname(f).toLowerCase()]);s.setHeader('Cache-Control','public, max-age=86400');s.end(d)});return}
+ s.setHeader('Content-Type','text/html; charset=utf-8');s.end(fs.readFileSync(__dirname+'/index.html'))});
 const wss=new WebSocketServer({server:srv});
 wss.on('connection',ws=>{
  let p=null;

@@ -6,8 +6,12 @@
 :root{--bg:#0b0a14;--ink:#ece9fa;--mut:#9b95bb;--acc:#ffd25a;--pnl:#1b1832;color-scheme:dark}
 html,body{height:100%;margin:0;background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;overflow:hidden}
 canvas{position:fixed;inset:0;width:100%;height:100%}
-#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;background:rgba(11,10,20,.92);text-align:center;padding:24px;overflow:auto}
-h1{font-size:clamp(32px,5vw,54px);margin:0;letter-spacing:-.01em;font-style:italic;text-shadow:0 0 22px rgba(124,242,160,.35)}
+#menu{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;gap:14px;background:rgba(11,10,20,.92);text-align:center;padding:24px;overflow:auto}
+#menu::before,#menu::after{content:"";margin:auto} /* centres the content but lets tall screens scroll */
+#mc{display:flex;flex-direction:column;align-items:center;gap:14px;max-width:100%}
+#menu>.logo{height:clamp(58px,11vh,104px);flex:none;pointer-events:none}
+#hudlogo{position:fixed;top:calc(5px + env(safe-area-inset-top,0px));left:50%;transform:translateX(-50%);height:58px;pointer-events:none;display:none}
+h1{font-size:clamp(28px,4.2vw,46px);margin:0;letter-spacing:-.01em;font-style:italic;text-shadow:0 0 22px rgba(124,242,160,.35)}
 p{max-width:540px;margin:0;color:var(--mut);line-height:1.5}
 ol{margin:0;padding:0;list-style-position:inside;columns:2;column-gap:40px;text-align:left}
 button,input{font:inherit;font-size:17px;padding:10px 18px;border-radius:8px;border:2px solid var(--acc);background:var(--pnl);color:var(--ink)}
@@ -15,15 +19,22 @@ button{cursor:pointer}button:hover:not(:disabled),button:focus-visible{backgroun
 button:disabled{opacity:.4;cursor:default}
 .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 button.sel{background:var(--acc);color:#1a1530}
-#leave{position:fixed;top:calc(8px + env(safe-area-inset-top,0px));left:12px;display:none;padding:5px 12px;font-size:14px}
+#leave{position:fixed;top:calc(19px + env(safe-area-inset-top,0px));left:12px;display:none;padding:5px 12px;font-size:14px}
 .chip{display:inline-block;padding:0 8px;border:1px solid var(--mut);border-radius:10px;font-size:13px;color:var(--mut);margin-left:6px}
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .aw{opacity:0;animation:fade .6s both}
 .awards{display:flex;flex-direction:column;gap:12px;min-width:min(440px,90vw)}
 .awards .aw{display:flex;gap:16px;align-items:center;text-align:left;background:var(--pnl);border:2px solid var(--acc);border-radius:12px;padding:12px 18px;font-size:18px}
 .ico{font-size:36px}
+#splash{position:fixed;inset:0;z-index:20;background:#0b0a14;display:flex;align-items:center;justify-content:center;cursor:pointer;outline:none}
+#splash img{max-width:100%;max-height:100%;object-fit:contain;opacity:0;transition:opacity .5s}
+#splash img.ok{opacity:1}
+summary{color:var(--acc);cursor:pointer;font-size:16px}
+details{max-width:540px}
 </style></head><body>
-<canvas id="c"></canvas><button id="leave">Leave</button><div id="menu"></div>
+<div id="splash" role="button" tabindex="0" aria-label="Play now"><img id="splimg" alt="Ghost Hunt: click to play"></div>
+<canvas id="c"></canvas><button id="leave">Leave</button><img id="hudlogo" src="/logo.webp" alt="Ghost Hunt">
+<div id="menu"><img class="logo" src="/logo.webp" alt="Ghost Hunt"><div id="mc"></div></div>
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
@@ -31,7 +42,7 @@ const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold c
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
-let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,mp=0,aw=null,awT=0;
+let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,mp=0,aw=null,awT=0,help=false;
 let live=true;
 const ws=(()=>{try{if(!/^https?:$/.test(location.protocol)||!location.host)throw 0;return new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host)}catch(e){live=false;return{readyState:0,send(){}}}})();
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
@@ -82,12 +93,12 @@ function buildMap(rows,seed){
   if(f(-1,0))E(x*T,y*T,3,T);if(f(1,0))E(x*T+T-3,y*T,3,T)}
  const vg=bc.createRadialGradient(PW/2,PH/2,PH*.35,PW/2,PH/2,PW*.62);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.5)');bc.fillStyle=vg;bc.fillRect(0,0,PW,PH)}
 function menu(){
- const m=$('menu');
- if(!live){m.style.display='flex';m.innerHTML='<h1>Ghost Hunt</h1><p>This page needs the game server to work. Open the link to your running game (the address that ends in onrender.com), or run <code>node server.js</code> and visit http://localhost:3000. It can’t run as a plain file or inside a preview.</p>';return}
- $('leave').style.display=ph=='play'&&me?'block':'none';
- if(ph=='play'){m.style.display='none';return}
- m.style.display='flex';
- if(!me){m.innerHTML='<h1>Ghost Hunt</h1><p>'+CONTROLS+'</p><div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
+ const M=$('menu'),m=$('mc');
+ if(!live){M.style.display='flex';m.innerHTML='<p>This page needs the game server to work. Open the link to your running game (the address that ends in onrender.com), or run <code>node server.js</code> and visit http://localhost:3000. It can’t run as a plain file or inside a preview.</p>';return}
+ $('leave').style.display=$('hudlogo').style.display=ph=='play'&&me?'block':'none';
+ if(ph=='play'){M.style.display='none';return}
+ M.style.display='flex';
+ if(!me){m.innerHTML='<p>'+CONTROLS+'</p><div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
   $('jn').onclick=join;$('nm').onkeydown=e=>{if(e.key=='Enter')join()};return}
  const mine=(scores.find(p=>p[0]==me)||[])[2]=='g'?'g':'h',score=`Ghost ${ms[0]} – ${ms[1]} Hunters (first to ${ms[2]} rounds)`;
  if(ph=='over'){
@@ -104,8 +115,9 @@ function menu(){
  if(mp){m.innerHTML=`<h1>Waiting room</h1><p>${mp==2?'The match is over. Other players are still viewing the results, and the lobby opens as soon as everyone is back.':`A match is in progress (${score}). You’ll be back with everyone when this one ends.`} You can change your role for the next match.</p>${roles}<ol>${list}</ol>`}
  else{
   const len=host==me?`<div class="row">${[1,3,5,7].map(v=>`<button data-bo="${v}" class="${bo==v?'sel':''}">${v==1?'Quick game':'Best of '+v}</button>`).join('')}</div>`:`<p>Match: ${bo==1?'quick game (1 round)':'best of '+bo+' (first to '+(bo+1)/2+' rounds)'}</p>`;
-  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<p>${CONTROLS}</p>${roles}<ol>${list}</ol>${len}`+
+  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary><p>${CONTROLS}</p></details>${roles}<ol>${list}</ol>${len}`+
    (host==me?`<button id="go" ${scores.length<2?'disabled':''}>Start the match</button>`:'<p>Waiting for the host to start…</p>')}
+ const dt=m.querySelector('details');if(dt)dt.ontoggle=()=>{help=dt.open};
  if($('rg'))$('rg').onclick=()=>ws.send('{"t":"role","v":"g"}');
  if($('rh'))$('rh').onclick=()=>ws.send('{"t":"role","v":"h"}');
  m.querySelectorAll('[data-bo]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'bo',v:+b.dataset.bo})));
@@ -118,7 +130,17 @@ ws.onmessage=e=>{const m=JSON.parse(e.data);
  else if(m.t=='s'){S=m;
   for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.id=h[0]}
   if(m.g){if(!DG.vis){DG.x=m.g[0];DG.y=m.g[1]}DG.tx=m.g[0];DG.ty=m.g[1];DG.vis=1}else DG.vis=0}};
-ws.onclose=()=>{$('menu').style.display='flex';$('menu').innerHTML='<h1>Disconnected</h1><p>Reload the page to reconnect.</p>'};
+ws.onclose=()=>{$('menu').style.display='flex';$('mc').innerHTML='<h1>Disconnected</h1><p>Reload the page to reconnect.</p>'};
+// Title screen: show a random image from the server's images folder (never the same one twice in a row); click or Enter to continue
+(()=>{const sp=$('splash'),im=$('splimg'),close=()=>{sp.style.display='none'};
+ sp.onclick=close;sp.onkeydown=e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();close()}};sp.focus();
+ fetch('/api/splash').then(r=>r.json()).then(l=>{
+  if(!l.length)return close();
+  let last=-1;try{last=+localStorage.getItem('gh_splash')}catch(e){}
+  let i=Math.random()*l.length|0;if(l.length>1&&i==last)i=(i+1)%l.length;
+  try{localStorage.setItem('gh_splash',i)}catch(e){}
+  im.onload=()=>im.classList.add('ok');im.onerror=close;im.src='/images/'+encodeURIComponent(l[i])
+ }).catch(close)})();
 menu();
 $('leave').onmousedown=e=>e.preventDefault();$('leave').onclick=()=>ws.send('{"t":"leave"}');
 
@@ -139,7 +161,7 @@ function ghostShape(x,y){ctx.fillStyle='#ffd25a';ctx.beginPath();ctx.arc(x,y-3,1
 function bar(x,y,w,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,w,12);ctx.fillStyle=col;ctx.fillRect(x,y,w*Math.max(0,Math.min(1,f)),12);ctx.fillStyle='#ece9fa';ctx.font='13px Georgia';ctx.textAlign='left';ctx.fillText(label,x,y-5)}
 
 function draw(dt){
- const d=devicePixelRatio||1,top=48,vw=innerWidth,vh=innerHeight;
+ const d=devicePixelRatio||1,top=68,vw=innerWidth,vh=innerHeight;
  if(cv.width!=vw*d||cv.height!=vh*d){cv.width=vw*d;cv.height=vh*d}
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#0b0a14';ctx.fillRect(0,0,cv.width,cv.height);
  if(!S||!base)return;
@@ -178,10 +200,10 @@ function draw(dt){
  if(S.al&&S.al[0]>0){const[n,t]=S.al,a=Math.min(1,t/.6);ctx.fillStyle=`rgba(20,8,24,${.75*a})`;ctx.fillRect(0,vh*.36,vw,72);
   ctx.fillStyle=`rgba(255,107,139,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${n} Hunter${n==1?'':'s'} Left`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
- ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,86,20);ctx.fillStyle='#ffd25a';ctx.fillText(`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,86,40);ctx.fillStyle='#ece9fa';
- bar(vw/2-110,28,220,S.hp/S.mx,'#ffd25a','Ghost health');
- if(S.role=='hunter')bar(vw-190,28,170,S.bat/100,S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':'Battery');
- else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,70)}bar(vw-190,28,170,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-250,40)}}
+ ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,86,28);ctx.fillStyle='#ffd25a';ctx.fillText(`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,86,50);ctx.fillStyle='#ece9fa';
+ bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
+ if(S.role=='hunter')bar(vw-220,50,200,S.bat/100,S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':'Battery');
+ else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
 </script></body></html>
