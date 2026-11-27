@@ -144,17 +144,20 @@ function musInit(){
  try{const C=window.AudioContext||window.webkitAudioContext;MUS.ctx=new C();MUS.master=MUS.ctx.createGain();MUS.master.gain.value=0;MUS.master.connect(MUS.ctx.destination);
   MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=.85;MUS.sfx.connect(MUS.ctx.destination);
   for(const n of['click','dead','powerup','zap','thunder','faint'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
+  for(let i=1;i<=8;i++)dec('/audio/sfx-thunder-'+i+'.mp3').then(b=>{SFXB['th'+i]=b}).catch(()=>{}); // recorded thunder: one is picked at random for each strike
   if(MUS.on)musLoad()}catch(e){MUS.ctx=null}}
 // load the track chosen for this round (each new round plays the next one), then start looping it
 function musLoad(){const i=MUS.cur,n=TRACKS[i];if(!MUS.ctx)return;
  (MUS.bufs[n]||(MUS.bufs[n]=dec('/audio/'+n+'.mp3'))).then(b=>{if(MUS.on&&MUS.cur==i){MUS.buf=b;musLoop()}}).catch(()=>{delete MUS.bufs[n]})}
+// pick a random recorded thunder clap (never the same one twice in a row); falls back to the synthesized one if none loaded
+function sfxThunder(){const l=Object.keys(SFXB).filter(k=>/^th\d+$/.test(k));if(!l.length)return sfx('thunder',1);let k=l[Math.random()*l.length|0];if(l.length>1&&k==MUS.lastTh)k=l[(l.indexOf(k)+1)%l.length];MUS.lastTh=k;sfx(k,1)}
 function sfx(n,v){if(!MUS.ctx||MUS.muted||!SFXB[n])return;const s=MUS.ctx.createBufferSource(),g=MUS.ctx.createGain();s.buffer=SFXB[n];g.gain.value=v==null?1:v;s.connect(g);g.connect(MUS.sfx);s.start()}
 // turns what changed between two snapshots into sound effects
 function sfxScan(p,m){
  if(m.ph!='play')return;
  for(const h of m.hs){const d=D[h[0]];if(d&&!d.down&&h[5]){sfx('faint',1);break}}
  if(p&&p.ph=='play'&&!p.st&&m.st)sfx('zap',.9);
- if(m.lt&&m.lt[1]>=1.5){if(!MUS.bolt){MUS.bolt=1;sfx('thunder',1)}}else if(!m.lt)MUS.bolt=0;
+ if(m.lt&&m.lt[1]>=1.5){if(!MUS.bolt){MUS.bolt=1;sfxThunder()}}else if(!m.lt)MUS.bolt=0;
  const d=D[me];if(m.role=='hunter'&&p&&d&&(p.pk||[]).some(q=>!m.pk.some(r=>r.x==q.x&&r.y==q.y)&&Math.hypot(q.x-d.x,q.y-d.y)<45))sfx('powerup',.9)}
 function musLoop(){
  const c=MUS.ctx,b=MUS.buf;if(!c||!b||MUS.running)return;MUS.running=true;
