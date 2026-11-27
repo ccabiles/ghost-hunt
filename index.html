@@ -31,7 +31,27 @@ button.sel{background:var(--acc);color:#1a1530}
 #splash img{max-width:100%;max-height:100%;object-fit:contain;opacity:0;transition:opacity .5s}
 #splash img.ok{opacity:1}
 summary{color:var(--acc);cursor:pointer;font-size:16px}
-details{max-width:540px}
+details{max-width:640px;width:100%}
+.guide{display:grid;grid-template-columns:1fr 1fr;gap:10px;max-width:640px;width:100%;text-align:left;margin-top:8px}
+.gc{background:var(--pnl);border:1px solid #3a3560;border-radius:10px;padding:10px 14px;display:flex;flex-direction:column;gap:10px}
+.gc.wide{grid-column:1/-1}
+.gc h3{margin:0;font-size:16px;color:var(--acc);font-weight:normal;letter-spacing:.02em}
+.ct{display:flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:48px}
+.ct small,.foot small{color:var(--mut);font-size:13px;margin-left:auto;text-align:right}
+.ct em{color:var(--mut);font-size:12px;font-style:italic}
+.dp{display:inline-flex;flex-direction:column;align-items:center;gap:3px}.dp>span{display:flex;gap:3px}
+.k{display:inline-flex;align-items:center;justify-content:center;min-width:26px;height:26px;padding:0 4px;box-sizing:border-box;font:bold 13px/1 ui-monospace,Menlo,Consolas,monospace;font-style:normal;color:var(--ink);background:linear-gradient(#2c2850,#1b1832);border:1px solid #6a63a0;border-bottom-width:3px;border-radius:6px}
+.k.wide{min-width:84px;padding:0 10px}
+.ic{color:#bdb7e0;flex:none}
+.hold{font-size:12px;color:var(--mut);font-style:italic}
+.leg{display:flex;justify-content:space-between;align-items:center;gap:8px;border-top:1px solid rgba(255,255,255,.08);padding-top:8px;font-size:15px}
+.leg span{display:inline-flex;align-items:center;gap:5px}.leg b{color:var(--mut);font-weight:normal}
+.bt{display:inline-block;width:11px;height:17px;border-radius:2px;background:#7cf2a0;box-shadow:0 0 8px rgba(124,242,160,.6)}
+.sbt{width:15px;height:23px;background:#4aa8ff;box-shadow:0 0 12px rgba(74,168,255,.9);animation:sbp 1s infinite alternate}
+@keyframes sbp{to{box-shadow:0 0 20px rgba(120,200,255,1)}}
+.foot{flex-direction:row;justify-content:space-around;align-items:center;flex-wrap:wrap}
+.foot span{display:inline-flex;align-items:center;gap:6px}.foot small{margin:0}
+@media(max-width:560px){.guide{grid-template-columns:1fr}}
 </style></head><body>
 <div id="splash" role="button" tabindex="0" aria-label="Play now"><img id="splimg" alt="Ghost Hunt: click to play"></div>
 <canvas id="c"></canvas><button id="leave">Leave</button><button id="mute" title="Music on/off (M)" aria-label="Music on or off">🔊</button><img id="hudlogo" src="/logo.webp" alt="Ghost Hunt">
@@ -39,7 +59,7 @@ details{max-width:540px}
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const CONTROLS='<b>Hunters:</b> WASD or arrow keys to move, mouse to aim, hold click or Space for light. A fainted friend shows a grey heart: keep a flashlight on them to fill it red and revive them (10 seconds with one light, faster with more).<br><b>Ghost:</b> move with WASD or arrows, Shift to dash, hold E to charge magic and release to drain every battery. Windows flicker just before lightning shines through them. The light travels in straight lines until a wall or furniture blocks it, and a ghost caught in it is revealed to every hunter for a few seconds. A flashlight beam briefly stuns the ghost, and the ghost can drag a hunter it just made faint a short way. Your beam gets shorter and dimmer as the battery drains, and batteries keep respawning around the map. A rare glowing blue super battery gives 30 seconds of a wider, longer, 25% stronger beam and 25% faster revives. Hunters can always see each other and each other’s flashlights. The ghost starts in the middle of the map and is revealed briefly at the start. Press M to turn the music and sounds on or off. The layout changes every game.';
+const CONTROLS='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg><em>or</em><svg class="ic" viewBox="0 0 60 44" width="52" height="38"><rect x="2" y="2" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><line x1="2" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="16" r="6" fill="#ffd25a"/></svg><small>aim</small></div><div class="ct"><i class="k  wide">Space</i><em>or</em><span class="clk"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg></span><small>hold = 🔦 light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><i class="k  wide">Shift</i><small>dash</small></div><div class="ct"><span class="hold">hold</span><i class="k">E</i><small>drain batteries</small></div></div><div class="gc wide foot"><span><i class="k">M</i> <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div>';
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
@@ -101,7 +121,7 @@ function menu(){
  $('leave').style.display=$('hudlogo').style.display=$('mute').style.display=ph=='play'&&me?'block':'none';
  if(ph=='play'){M.style.display='none';return}
  M.style.display='flex';
- if(!me){m.innerHTML='<p>'+CONTROLS+'</p><div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
+ if(!me){m.innerHTML=CONTROLS+'<div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
   $('jn').onclick=join;$('nm').onkeydown=e=>{if(e.key=='Enter')join()};return}
  const mine=(scores.find(p=>p[0]==me)||[])[2]=='g'?'g':'h',score=`Ghost ${ms[0]} – ${ms[1]} Hunters (first to ${ms[2]} rounds)`;
  if(ph=='over'){
@@ -118,7 +138,7 @@ function menu(){
  if(mp){m.innerHTML=`<h1>Waiting room</h1><p>${mp==2?'The match is over. Other players are still viewing the results, and the lobby opens as soon as everyone is back.':`A match is in progress (${score}). You’ll be back with everyone when this one ends.`} You can change your role for the next match.</p>${roles}<ol>${list}</ol>`}
  else{
   const len=host==me?`<div class="row">${[1,3,5,7].map(v=>`<button data-bo="${v}" class="${bo==v?'sel':''}">${v==1?'Quick game':'Best of '+v}</button>`).join('')}</div>`:`<p>Match: ${bo==1?'quick game (1 round)':'best of '+bo+' (first to '+(bo+1)/2+' rounds)'}</p>`;
-  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary><p>${CONTROLS}</p></details>${roles}<ol>${list}</ol>${len}`+
+  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${roles}<ol>${list}</ol>${len}`+
    (host==me?`<button id="go" ${scores.length<2?'disabled':''}>Start the match</button>`:'<p>Waiting for the host to start…</p>')}
  const dt=m.querySelector('details');if(dt)dt.ontoggle=()=>{help=dt.open};
  if($('rg'))$('rg').onclick=()=>ws.send('{"t":"role","v":"g"}');
@@ -272,7 +292,7 @@ function draw(dt){
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
  ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,128,28);ctx.fillStyle='#ffd25a';ctx.fillText(`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,128,50);ctx.fillStyle='#ece9fa';
  bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
- if(S.role=='hunter')bar(vw-220,50,200,Math.min(1,S.bat/100),my&&my.sup>0?'#4aa8ff':S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':my&&my.sup>0?`SUPER ${Math.ceil(my.sup)}s  Battery: ${Math.ceil(S.bat*.3)}s`:`Battery: ${Math.ceil(S.bat*.3)}s`);
+ if(S.role=='hunter')bar(vw-220,50,200,Math.min(1,S.bat/(my&&my.sup>0?150:100)),my&&my.sup>0?'#4aa8ff':S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':my&&my.sup>0?`SUPER ${Math.ceil(my.sup)}s  Battery: ${Math.ceil(S.bat*.3)}s`:`Battery: ${Math.ceil(S.bat*.3)}s`);
  else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff','Magic (hold E)');ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
