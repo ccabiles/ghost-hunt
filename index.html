@@ -142,7 +142,7 @@ const dec=u=>fetch(u).then(r=>r.arrayBuffer()).then(b=>new Promise((ok,no)=>MUS.
 function musInit(){
  if(MUS.ctx)return;
  try{const C=window.AudioContext||window.webkitAudioContext;MUS.ctx=new C();MUS.master=MUS.ctx.createGain();MUS.master.gain.value=0;MUS.master.connect(MUS.ctx.destination);
-  MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=.85;MUS.sfx.connect(MUS.ctx.destination);
+  MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=1;MUS.sfx.connect(MUS.ctx.destination);
   for(const n of['click','dead','powerup','zap','thunder','faint'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
   for(let i=1;i<=8;i++)dec('/audio/sfx-thunder-'+i+'.mp3').then(b=>{SFXB['th'+i]=b}).catch(()=>{}); // recorded thunder: one is picked at random for each strike
   if(MUS.on)musLoad()}catch(e){MUS.ctx=null}}
@@ -151,7 +151,7 @@ function musLoad(){const i=MUS.cur,n=TRACKS[i];if(!MUS.ctx)return;
  (MUS.bufs[n]||(MUS.bufs[n]=dec('/audio/'+n+'.mp3'))).then(b=>{if(MUS.on&&MUS.cur==i){MUS.buf=b;musLoop()}}).catch(()=>{delete MUS.bufs[n]})}
 // pick a random recorded thunder clap (never the same one twice in a row); falls back to the synthesized one if none loaded
 function sfxThunder(){const l=Object.keys(SFXB).filter(k=>/^th\d+$/.test(k));if(!l.length)return sfx('thunder',1);let k=l[Math.random()*l.length|0];if(l.length>1&&k==MUS.lastTh)k=l[(l.indexOf(k)+1)%l.length];MUS.lastTh=k;sfx(k,1)}
-function sfx(n,v){if(!MUS.ctx||MUS.muted||!SFXB[n])return;const s=MUS.ctx.createBufferSource(),g=MUS.ctx.createGain();s.buffer=SFXB[n];g.gain.value=v==null?1:v;s.connect(g);g.connect(MUS.sfx);s.start()}
+function sfx(n,v){if(!MUS.ctx||MUS.muted||!SFXB[n])return;if(MUS.ctx.state=='suspended')MUS.ctx.resume();const s=MUS.ctx.createBufferSource(),g=MUS.ctx.createGain();s.buffer=SFXB[n];g.gain.value=v==null?1:v;s.connect(g);g.connect(MUS.sfx);s.start()}
 // turns what changed between two snapshots into sound effects
 function sfxScan(p,m){
  if(m.ph!='play')return;
