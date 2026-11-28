@@ -77,6 +77,7 @@ html{touch-action:manipulation}
 #tg button.dn{background:var(--acc);color:#1a1530}
 #rot small{display:block;margin-top:14px;font-size:15px;opacity:.7}#rot{position:absolute;inset:0;background:rgba(11,10,20,.96);color:var(--acc);font-size:22px;align-items:center;justify-content:center;text-align:center;padding:30px;pointer-events:auto;display:none}
 @media(pointer:coarse){#leave{padding:8px 12px;font-size:15px}#mute{left:92px;padding:6px 10px}button,input{font-size:18px}}
+@media(pointer:coarse) and (orientation:landscape){#mute{left:calc(12px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px))}#fs{left:calc(68px + env(safe-area-inset-left,0px));top:calc(10px + env(safe-area-inset-top,0px))}#leave{left:calc(12px + env(safe-area-inset-left,0px));top:calc(66px + env(safe-area-inset-top,0px))}#tg{gap:10px}#tg button{width:74px;height:74px;font-size:13px}}
 </style></head><body>
 <div id="splash" role="button" tabindex="0" aria-label="Play now"><img id="splimg" alt="Ghost Hunt: click to play"></div>
 <canvas id="c"></canvas><button id="leave">Leave</button><button id="fs" title="Full screen" aria-label="Full screen">⛶</button><div id="fstip"></div><button id="mute" title="Music on/off (M)" aria-label="Music on or off">🔊</button><img id="hudlogo" src="/logo.webp" alt="Ghost Hunt">
@@ -274,7 +275,7 @@ function buildMap(rows,seed,ob,ru,rm){
 function menu(){
  const M=$('menu'),m=$('mc');
  if(!live){M.style.display='flex';m.innerHTML='<p>This page needs the game server to work. Open the link to your running game (the address that ends in onrender.com), or run <code>node server.js</code> and visit http://localhost:3000. It can’t run as a plain file or inside a preview.</p>';return}
- $('leave').style.display=$('hudlogo').style.display=$('mute').style.display=ph=='play'&&me?'block':'none';$('fs').style.display=ph=='play'&&me&&window.fsShow&&fsShow()?'block':'none';
+ $('leave').style.display=$('hudlogo').style.display=$('mute').style.display=ph=='play'&&me?'block':'none';if(TOUCH)$('hudlogo').style.display='none';$('fs').style.display=ph=='play'&&me&&window.fsShow&&fsShow()?'block':'none';
  if(ph=='play'){M.style.display='none';return}
  M.style.display='flex';
  if(!me){m.innerHTML=CONTROLS+'<div class="row"><input id="nm" maxlength="14" placeholder="Your name" autofocus><button id="jn">Join</button></div>';
@@ -445,6 +446,7 @@ function heart(x,y,s,p){
 function ghostShape(x,y){ctx.fillStyle='#ffd25a';ctx.beginPath();ctx.arc(x,y-3,11,Math.PI,0);ctx.lineTo(x+11,y+11);
  for(let i=0;i<3;i++){ctx.lineTo(x+11-i*7.33-3.67,y+6);ctx.lineTo(x+11-(i+1)*7.33,y+11)}
  ctx.closePath();ctx.fill();ctx.fillStyle='#221c3a';ctx.fillRect(x-5,y-6,3,5);ctx.fillRect(x+2,y-6,3,5)}
+function vbar(x,y,h,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,12,h);ctx.fillStyle=col;const fh=h*Math.max(0,Math.min(1,f));ctx.fillRect(x,y+h-fh,12,fh);ctx.strokeStyle='rgba(236,233,250,.35)';ctx.lineWidth=1;ctx.strokeRect(x+.5,y+.5,11,h-1);ctx.fillStyle='#ece9fa';ctx.font='11px Georgia';ctx.textAlign='center';ctx.fillText(label,x+6,y-5);ctx.textAlign='left'}
 function bar(x,y,w,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,w,12);ctx.fillStyle=col;ctx.fillRect(x,y,w*Math.max(0,Math.min(1,f)),12);ctx.fillStyle='#ece9fa';ctx.font='13px Georgia';ctx.textAlign='left';ctx.fillText(label,x,y-5)}
 
 
@@ -465,7 +467,7 @@ function drawMagic(){const tm=Date.now()/1000;
   const gr=ctx.createRadialGradient(x,y,0,x,y,MCR);gr.addColorStop(0,`rgba(255,255,255,${.7*(1-p)})`);gr.addColorStop(.6,`rgba(190,130,255,${.55*(1-p)})`);gr.addColorStop(1,`rgba(150,90,255,${.3*(1-p)})`);ctx.fillStyle=gr;ctx.fillRect(x-MCR,y-MCR,2*MCR,2*MCR);
   ctx.strokeStyle=`rgba(235,215,255,${1-p})`;ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,MCR*(.5+.5*p),0,7);ctx.stroke();ctx.restore()}}
 function draw(dt){
- const d=devicePixelRatio||1,top=68,vw=innerWidth,vh=innerHeight;
+ const d=devicePixelRatio||1,top=TOUCH?0:68,vw=innerWidth,vh=innerHeight;
  if(cv.width!=vw*d||cv.height!=vh*d){cv.width=vw*d;cv.height=vh*d}
  ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle='#0b0a14';ctx.fillRect(0,0,cv.width,cv.height);
  if(!S||!base)return;
@@ -542,16 +544,27 @@ function draw(dt){
   ctx.fillStyle=`rgba(20,8,24,${.78*a})`;ctx.fillRect(0,vh*.36,vw,72);ctx.fillStyle=`rgba(196,150,255,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${gn} the Ghost!`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
  if(S.al&&S.al[0]>0){const[n,t]=S.al,a=Math.min(1,t/.6);ctx.fillStyle=`rgba(20,8,24,${.75*a})`;ctx.fillRect(0,vh*.36,vw,72);
   ctx.fillStyle=`rgba(255,107,139,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${n} Hunter${n==1?'':'s'} Left`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
+ const SIDE=TOUCH&&vw>vh; // phones held sideways: the HUD lives in the free margins left and right of the map
+ if(TOUCH&&!SIDE){const gr=ctx.createLinearGradient(0,0,0,84);gr.addColorStop(0,'rgba(8,6,16,.78)');gr.addColorStop(1,'rgba(8,6,16,0)');ctx.fillStyle=gr;ctx.fillRect(0,0,vw,84);ctx.fillStyle='#ece9fa'} // soft shade so the HUD text stays readable over the map
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
- ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,TOUCH?150:128,28);ctx.fillStyle='#ffd25a';ctx.fillText(md=='r'?`Round ${Math.min(rd[0]+1,rd[1])} of ${rd[1]}`:`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,TOUCH?150:128,50);ctx.fillStyle='#ece9fa';
- if(md=='r'&&scores.length){ // running points tally: one chip per player, top scorers first
+ if(SIDE){ctx.font='14px Georgia';ctx.textAlign='left';ctx.fillStyle='#ece9fa';const sx=14;
+  ctx.fillText({ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role],sx,126);ctx.font='bold 20px Georgia';ctx.fillText(`${m/60|0}:${String(m%60|0).padStart(2,'0')}`,sx,148);ctx.font='13px Georgia';ctx.fillText(`${dn}/${S.hs.length} fainted`,sx,166);
+  ctx.fillStyle='#ffd25a';ctx.fillText(md=='r'?`Round ${Math.min(rd[0]+1,rd[1])} of ${rd[1]}`:`${S.sc[0]} – ${S.sc[1]} · first to ${S.sc[2]}`,sx,184);ctx.fillStyle='#ece9fa'}
+ else{ ctx.fillText(`${{ghost:'Ghost',hunter:'Hunter',spec:'Spectating'}[S.role]}   ${m/60|0}:${String(m%60|0).padStart(2,'0')}   ${dn}/${S.hs.length} fainted`,TOUCH?206:128,28);ctx.fillStyle='#ffd25a';ctx.fillText(md=='r'?`Round ${Math.min(rd[0]+1,rd[1])} of ${rd[1]}`:`Ghost ${S.sc[0]} – ${S.sc[1]} Hunters · first to ${S.sc[2]}`,TOUCH?206:128,50);ctx.fillStyle='#ece9fa';}
+ if(SIDE&&md=='r'&&scores.length){ // tally as a compact column in the left margin
+  ctx.font='11px Georgia';ctx.textAlign='left';const cs=[...scores].filter(p=>!p[3]).sort((a,b)=>(b[4]||0)-(a[4]||0)),fit=Math.max(1,Math.floor((vh-196)/19)),show=cs.length>fit?cs.slice(0,fit-1):cs;
+  show.forEach((p,i)=>{const nm=p[1].length>9?p[1].slice(0,8)+'…':p[1],t=`${p[0]==S.gid?'👻':''}${nm} ${p[4]||0}`,w=Math.max(70,ctx.measureText(t).width+14),y=196+i*19;ctx.fillStyle='rgba(27,24,50,.82)';ctx.strokeStyle=p[0]==me?'#ffd25a':'#3a3560';ctx.lineWidth=1.2;ctx.beginPath();ctx.roundRect(10,y,w,16,8);ctx.fill();ctx.stroke();ctx.fillStyle='#ece9fa';ctx.fillText(t,17,y+12)});
+  if(show.length<cs.length){ctx.fillStyle='#b9b4d6';ctx.fillText('+'+(cs.length-show.length)+' more',14,196+show.length*19+12)}}
+ else if(md=='r'&&scores.length){ // running points tally: one chip per player, top scorers first
   ctx.font='12px Georgia';ctx.textAlign='left';const rows=[[]],mw=vw-40;let rw=0;
   const chips=[...scores].filter(p=>!p[3]).sort((a,b)=>(b[4]||0)-(a[4]||0)).map(p=>{const t=`${p[0]==S.gid?'👻 ':''}${p[1]} ${p[4]||0}`;return{p,t,w:ctx.measureText(t).width+16}});
   for(const ch of chips){if(rw+ch.w+6>mw&&rows[rows.length-1].length){rows.push([]);rw=0}rows[rows.length-1].push(ch);rw+=ch.w+6}
   rows.forEach((r,ri)=>{let tw=r.reduce((a,c2)=>a+c2.w+6,-6),x=(vw-tw)/2;const y=70+ri*22;
    for(const ch of r){ctx.fillStyle='rgba(27,24,50,.82)';ctx.strokeStyle=ch.p[0]==me?'#ffd25a':'#3a3560';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(x,y,ch.w,19,9);ctx.fill();ctx.stroke();ctx.fillStyle='#ece9fa';ctx.fillText(ch.t,x+8,y+14);x+=ch.w+6}})}
- bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
- if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff',(TOUCH?'Magic (hold the button)':'Magic (hold E)'));ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
+ if(SIDE){const bh=S.role=='ghost'?Math.max(60,Math.min(200,vh-224)):Math.min(vh-80,200),by=34,x0=vw-26;vbar(x0,by,bh,S.hp/S.mx,'#ffd25a','HP');
+  if(S.role=='ghost'){vbar(x0-32,by,bh,S.ch,'#b48cff','Magic');vbar(x0-64,by,bh,S.dc<=0?1:1-S.dc/2,S.dc<=0?'#7cf2a0':'#6b6684','Dash')}}
+ else bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
+ if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}if(!SIDE){bar(vw-220,50,200,S.ch,'#b48cff',(TOUCH?'Magic (hold the button)':'Magic (hold E)'));ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
 </script></body></html>
