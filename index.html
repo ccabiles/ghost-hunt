@@ -18,7 +18,7 @@ ol{margin:0;padding:0;list-style-position:inside;columns:2;column-gap:40px;text-
 button,input{font:inherit;font-size:17px;padding:10px 18px;border-radius:8px;border:2px solid var(--acc);background:var(--pnl);color:var(--ink)}
 button{cursor:pointer}button:hover:not(:disabled),button:focus-visible{background:var(--acc);color:#1a1530;outline:none}
 button:disabled{opacity:.4;cursor:default}
-.slw{width:min(340px,86vw);margin:6px auto;text-align:center}.slw b{display:block;font-size:18px;margin-bottom:6px}.slw input{width:100%;accent-color:#b48cff;height:28px;cursor:pointer}.slt{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
+.slw{width:min(340px,86vw);margin:6px auto;text-align:center}.slw b{display:block;font-size:18px;margin-bottom:6px}.slw input{border:0;padding:0;box-shadow:none;outline:0;border-radius:0;-webkit-appearance:none;appearance:none;width:100%;height:22px;background:transparent;cursor:pointer;margin:0}.slw input::-webkit-slider-runnable-track{height:6px;border-radius:3px;background:#4a3a6a}.slw input::-moz-range-track{height:6px;border-radius:3px;background:#4a3a6a}.slw input::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:#b48cff;border:0;margin-top:-7px}.slw input::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#b48cff;border:0}.slt{display:flex;justify-content:space-between;padding:0 10px;font-size:12px;opacity:.75;margin-top:2px}.slt span{width:0;display:flex;justify-content:center;overflow:visible}
 .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 button.sel{background:var(--acc);color:#1a1530}
 #leave{position:fixed;top:calc(19px + env(safe-area-inset-top,0px));left:12px;display:none;padding:5px 12px;font-size:14px}
@@ -73,7 +73,7 @@ html{touch-action:manipulation}
 #tg button{width:96px;height:96px;border-radius:50%;font-size:16px;font-weight:bold;padding:0;background:rgba(27,24,50,.7);touch-action:none;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #tg button small{font-size:11px;font-weight:normal;opacity:.8}
 #tg button.dn{background:var(--acc);color:#1a1530}
-#rot{position:absolute;inset:0;background:rgba(11,10,20,.96);color:var(--acc);font-size:22px;align-items:center;justify-content:center;text-align:center;padding:30px;pointer-events:auto;display:none}
+#rot small{display:block;margin-top:14px;font-size:15px;opacity:.7}#rot{position:absolute;inset:0;background:rgba(11,10,20,.96);color:var(--acc);font-size:22px;align-items:center;justify-content:center;text-align:center;padding:30px;pointer-events:auto;display:none}
 @media(pointer:coarse){#leave{padding:8px 12px;font-size:15px}#mute{left:92px;padding:6px 10px}button,input{font-size:18px}}
 </style></head><body>
 <div id="splash" role="button" tabindex="0" aria-label="Play now"><img id="splimg" alt="Ghost Hunt: click to play"></div>
@@ -88,7 +88,7 @@ const CONTROLS=TOUCH?CT:CK;
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
 const fog=document.createElement('canvas'),fc=fog.getContext('2d');
 const names={},D={},DG={x:0,y:0,tx:0,ty:0,vis:0},keys={},mouse={x:0,y:0,down:false};
-let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,rn=5,rd=[0,5],md='c',gm='c',mp=0,aw=null,awT=0,help=false;
+let me=0,S=null,ph='join',host=0,msg='',scores=[],ms=[0,0,3],fin='',lastM='',bo=5,rn=5,rd=[0,5],md='r',gm='r',mp=0,aw=null,awT=0,help=false;
 let live=true;
 const ws=(()=>{try{if(!/^https?:$/.test(location.protocol)||!location.host)throw 0;return new WebSocket((location.protocol=='https:'?'wss://':'ws://')+location.host)}catch(e){live=false;return{readyState:0,send(){}}}})();
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
@@ -294,7 +294,7 @@ function menu(){
  if(mp){m.innerHTML=`<h1>Waiting room</h1><p>${mp==2?'The match is over. Other players are still viewing the results, and the lobby opens as soon as everyone is back.':`A match is in progress (${score}). You’ll be back with everyone when this one ends.`} You can change your role for the next match.</p>${roles}<ol>${list}</ol>`}
  else{
   const lv=gm=='r'?rn:bo;
-  const len=host==me?`<div class="slw"><b id="slv">${ltxt(lv)}</b><input type="range" id="sl" min="1" max="10" step="1" value="${lv}"><div class="slt"><span>1</span><span>10</span></div></div>`:`<p>Match: ${gm=='r'?rn+(rn==1?' round':' rounds')+', most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+((bo>>1)+1)+' rounds)'}</p>`;
+  const len=host==me?`<div class="slw"><b id="slv">${ltxt(lv)}</b><input type="range" id="rsl" min="1" max="10" step="1" value="${lv}"><div class="slt">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span>${n}</span>`).join('')}</div></div>`:`<p>Match: ${gm=='r'?rn+(rn==1?' round':' rounds')+', most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+((bo>>1)+1)+' rounds)'}</p>`;
   const noG=gm=='c'&&!scores.some(p=>!p[3]&&p[2]=='g');
   m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${modeCards}${roles}<ol>${list}</ol>${len}`+
    (host==me?`<button id="go" ${scores.length<2||noG?'disabled':''}>Start the match</button>${scores.length<2?'<p>Needs at least 2 players: 1 ghost and 1 hunter.</p>':noG?'<p>Someone needs to choose “I’ll be the ghost” before the match can start.</p>':''}`:'<p>Waiting for the host to start…</p>')}
@@ -302,13 +302,13 @@ function menu(){
  m.querySelectorAll('button[data-gm]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'gm',v:b.dataset.gm})));
  if($('rg'))$('rg').onclick=()=>ws.send('{"t":"role","v":"g"}');
  if($('rh'))$('rh').onclick=()=>ws.send('{"t":"role","v":"h"}');
- if($('sl')){$('sl').oninput=e=>{$('slv').textContent=ltxt(+e.target.value)};$('sl').onchange=e=>ws.send(JSON.stringify({t:gm=='r'?'rn':'bo',v:+e.target.value}))}
+ if($('rsl')){$('rsl').oninput=e=>{$('slv').textContent=ltxt(+e.target.value)};$('rsl').onchange=e=>ws.send(JSON.stringify({t:gm=='r'?'rn':'bo',v:+e.target.value}))}
  if($('go'))$('go').onclick=()=>ws.send('{"t":"start"}')}
 function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
 ws.onmessage=e=>{const m=JSON.parse(e.data);
  if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd,m.ob,m.ru,m.rm)}
  else if(m.t=='l'){if(m.ph=='over'&&ph!='over'&&m.rk=='g')sfx('ck'+(1+Math.random()*4|0),.9);else if(m.ph=='over'&&ph!='over'&&m.rk=='h')sfx('angel',.85); // ghost won: one of four cackles; hunters killed the ghost: angelic choir
-  me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'c';gm=m.gm||'c';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
+  me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'r';gm=m.gm||'r';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
  else if(m.t=='s'){const pS=S;sfxScan(pS,m);if(m.mb&&m.mb.length&&!(pS&&pS.mb&&pS.mb.length))sfx('zap',.8);
   // the ghost is close (the ? or ! appears): this hunter alone hears one of ten ghostly whispers/breaths, at most once every 8s
@@ -403,9 +403,9 @@ setInterval(()=>{if(!me||!S||ph!='play'||ws.readyState!=1)return;
 // ---- touch controls (phones/tablets): left thumb = move, right thumb = aim + light (hunter) or DASH / MAGIC buttons (ghost)
 if(TOUCH){
  const o=document.createElement('div');o.id='tc';
- o.innerHTML='<div id="tl" class="tz"></div><div id="tr" class="tz"></div><div id="tg"><button id="tdash">DASH</button><button id="tmag">MAGIC<small>hold</small></button></div><div id="rot">Rotate your phone sideways ↻</div><i class="sb" id="sl"><i></i></i><i class="sb" id="sr"><i></i></i>';
+ o.innerHTML='<div id="tl" class="tz"></div><div id="tr" class="tz"></div><div id="tg"><button id="tdash">DASH</button><button id="tmag">MAGIC<small>hold</small></button></div><div id="rot">Best played sideways ↻<br><small>(if your phone is rotation-locked, just tap here to play upright)</small></div><i class="sb" id="sl"><i></i></i><i class="sb" id="sr"><i></i></i>';
  document.body.appendChild(o);
- const R=54;
+ const R=54;let rotOK=false;$('rot').addEventListener('pointerdown',e=>{rotOK=true;$('rot').style.display='none';e.preventDefault()});
  function stick(zone,base,fn,end){let id=null,ox0=0,oy0=0;const kn=base.firstChild;
   zone.addEventListener('pointerdown',e=>{if(id!==null)return;id=e.pointerId;zone.setPointerCapture(id);ox0=e.clientX;oy0=e.clientY;base.style.cssText=`display:block;left:${ox0-54}px;top:${oy0-54}px`;kn.style.transform='translate(0,0)';fn(0,0,0);e.preventDefault()});
   zone.addEventListener('pointermove',e=>{if(e.pointerId!==id)return;let dx=e.clientX-ox0,dy=e.clientY-oy0;const l=Math.hypot(dx,dy),m=Math.min(1,l/R);const ux=l?dx/l:0,uy=l?dy/l:0;if(l>R){dx=ux*R;dy=uy*R}kn.style.transform=`translate(${dx}px,${dy}px)`;fn(ux,uy,m)});
@@ -419,7 +419,7 @@ if(TOUCH){
  setInterval(()=>{const on=ph=='play'&&me&&S&&(S.role=='hunter'||S.role=='ghost');o.style.display=on?'block':'none';
   if(!on){tk.kx=tk.ky=0;tk.aim=tk.on=tk.dash=tk.ch=false;return}
   const g=S.role=='ghost';$('tr').style.display=g?'none':'block';$('tg').style.display=g?'flex':'none';
-  $('rot').style.display=innerHeight>innerWidth?'flex':'none'},150)}
+  $('rot').style.display=innerHeight>innerWidth&&!rotOK?'flex':'none'},150)}
 
 // a fainted hunter's heart: grey, and it fills red from the bottom as the revive progresses (p = 0..1)
 function heart(x,y,s,p){
