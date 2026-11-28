@@ -155,7 +155,7 @@ const SUPT=30,sk=h=>h.sup>0?1.3:1,wt=h=>pw(h)*(h.sup>0?1.25:1);
 const hit=(h,o)=>{const dx=o.x-h.x,dy=o.y-h.y,d=Math.hypot(dx,dy);if(d>RANGE*pw(h)*sk(h))return false;if(d<14)return true;
  return Math.abs(angd(Math.atan2(dy,dx),h.ang))<HALF*sk(h)&&los(h.x,h.y,o.x,o.y)};
 
-const P=new Map();let nid=1,ph='lobby',R=null,lastG=0,msg='',bo=5,awardId=0,gm='c',rn=5; // gm: 'r' = random turns as the ghost, 'c' = players choose their role
+const P=new Map();let lastK='',nid=1,ph='lobby',R=null,lastG=0,msg='',bo=5,awardId=0,gm='c',rn=5; // gm: 'r' = random turns as the ghost, 'c' = players choose their role
 
 // match score: g = rounds won by the ghost, h = rounds won by the hunters, t = rounds needed to win the match
 let M={g:0,h:0,t:3,fin:'',last:'',aw:null};
@@ -167,7 +167,7 @@ const hunters=()=>[...P.values()].filter(p=>p.rd&&p.id!=R.gid);
 // players who left mid-match (p.away) see the lobby while the match carries on without them
 function lobby(){
  const ps=[...P.values()].map(p=>[p.id,p.name,p.pref,p.away?1:0,p.pts||0]);
- for(const p of P.values())send(p,{t:'l',ps,host:hostId(),ph:p.away?'lobby':ph,mp:ph=='lobby'?0:ph=='awards'?2:1,msg,ms:[M.g,M.h,M.t],fin:M.fin,last:M.last,aw:M.aw,bo,rn,me:p.id,gm,rd:[M.r||0,M.rt||rn],md:M.mode||gm})}
+ for(const p of P.values())send(p,{t:'l',ps,host:hostId(),ph:p.away?'lobby':ph,mp:ph=='lobby'?0:ph=='awards'?2:1,msg,ms:[M.g,M.h,M.t],fin:M.fin,last:M.last,aw:M.aw,bo,rn,rk:ph=='over'?lastK:'',me:p.id,gm,rd:[M.r||0,M.rt||rn],md:M.mode||gm})}
 function toLobby(m){ph='lobby';msg=m||'';for(const p of P.values()){p.away=false;p.rd=false}M.g=M.h=0;lobby()}
 function startMatch(){
  const act=[...P.values()].filter(p=>!p.away);
@@ -203,7 +203,7 @@ function begin(){
 // after the last round of a match everyone sees the awards, then each player presses Return to Lobby
 function awards(){ph='awards';msg='';lobby();const id=++awardId;setTimeout(()=>{if(ph=='awards'&&awardId==id)toLobby('')},90000)}
 function end(m,k){ // k: h hunters win the round, g ghost wins the round, x cancelled (no score)
- ph='over';msg=m;
+ ph='over';msg=m;lastK=k;
  if(k=='g')M.g++;else if(k=='h')M.h++;
  const rm=M.mode=='r';
  if(rm&&k!='x'){M.r++;for(const p of P.values()){if(k=='g'&&p.id==R.gid)p.pts=(p.pts||0)+1;else if(k=='h'&&p.rd&&p.id!=R.gid)p.pts=(p.pts||0)+1}}
