@@ -305,9 +305,13 @@ function menu(){
 function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
 ws.onmessage=e=>{const m=JSON.parse(e.data);
  if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd,m.ob,m.ru,m.rm)}
- else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'c';gm=m.gm||'c';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
+ else if(m.t=='l'){if(m.ph=='over'&&ph!='over'&&m.rk=='g')sfx('ck'+(1+Math.random()*4|0),.9);else if(m.ph=='over'&&ph!='over'&&m.rk=='h')sfx('angel',.85); // ghost won: one of four cackles; hunters killed the ghost: angelic choir
+  me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'c';gm=m.gm||'c';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
- else if(m.t=='s'){const pS=S;sfxScan(pS,m);if(m.mb&&m.mb.length&&!(pS&&pS.mb&&pS.mb.length))sfx('zap',.8);S=m;
+ else if(m.t=='s'){const pS=S;sfxScan(pS,m);if(m.mb&&m.mb.length&&!(pS&&pS.mb&&pS.mb.length))sfx('zap',.8);
+  // the ghost is close (the ? or ! appears): this hunter alone hears one of ten ghostly whispers/breaths, at most once every 8s
+  if(m.ph=='play'&&m.near>0&&!(pS&&pS.near>0)&&Date.now()-lastNear>8000){lastNear=Date.now();sfx('nr'+(1+Math.random()*10|0),.75)}
+  S=m;
   for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];if(h[5]&&!d.down)d.f0=Date.now();
    // the battery icon pops up for 3s: on a pickup, when charge drops to 20%, and when the light is pressed with an empty battery
    if(d.bat!=null&&!d.down&&!h[5]){const ns=h[8]||0;if(h[7]>d.bat+.5||(ns>0&&!(d.sup>0))||(d.bat>20&&h[7]<=20))d.bt=Date.now()}
@@ -325,6 +329,9 @@ function musInit(){
  try{const C=window.AudioContext||window.webkitAudioContext;MUS.ctx=new C();MUS.master=MUS.ctx.createGain();MUS.master.gain.value=0;MUS.master.connect(MUS.ctx.destination);
   MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=1;MUS.sfx.connect(MUS.ctx.destination);
   for(const n of['click','dead','powerup','super','zap','thunder','faint','laugh'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
+  dec('/audio/sfx-angel.mp3').then(b=>{SFXB.angel=b}).catch(()=>{});
+  for(let i=1;i<=10;i++)dec('/audio/sfx-near-'+i+'.mp3').then(b=>{SFXB['nr'+i]=b}).catch(()=>{});
+  for(let i=1;i<=4;i++)dec('/audio/sfx-cackle-'+i+'.mp3').then(b=>{SFXB['ck'+i]=b}).catch(()=>{});
   for(let i=1;i<=8;i++)dec('/audio/sfx-thunder-'+i+'.mp3').then(b=>{SFXB['th'+i]=b}).catch(()=>{}); // recorded thunder: one is picked at random for each strike
   if(MUS.on)musLoad()}catch(e){MUS.ctx=null}}
 // load the track chosen for this round (each new round plays the next one), then start looping it
@@ -428,7 +435,7 @@ function bar(x,y,w,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,w,12);c
 // ghost magic circles (radius MCR must match the server): ghostly purple rune circles, clipped by walls, pulsing faster until they go off
 const MCR=130,MCT=3;
 function visPoly(x,y,r){const pts=[],n=48;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a);let d=3;while(d<r){const tx=Math.floor((x+dx*d)/T),ty=Math.floor((y+dy*d)/T);if(ty<0||tx<0||ty>=H||tx>=W||grid[ty][tx]==1||grid[ty][tx]==2)break;d+=5}pts.push([x+dx*Math.min(d,r),y+dy*Math.min(d,r)])}return pts}
-let laughed=false;
+let laughed=false,lastNear=0;
 function drawMagic(){const tm=Date.now()/1000;
  for(const[t,cs]of S.mc||[])for(const[x,y]of cs){const f=Math.min(1,t/.7),k=t/MCT,pulse=.5+.5*Math.sin(t*(4+k*16));
   ctx.save();ctx.globalAlpha=f;ctx.beginPath();visPoly(x,y,MCR).forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.clip();
