@@ -23,6 +23,7 @@ button:disabled{opacity:.4;cursor:default}
 button.sel{background:var(--acc);color:#1a1530}
 #fs{position:fixed;top:calc(19px + env(safe-area-inset-top,0px));left:150px;display:none;padding:6px 10px;font-size:16px;line-height:1.3}#fstip{position:fixed;left:50%;transform:translateX(-50%);top:calc(70px + env(safe-area-inset-top,0px));z-index:30;max-width:84vw;background:rgba(27,24,50,.95);border:2px solid var(--acc);border-radius:12px;padding:10px 14px;font-size:15px;text-align:center;display:none}
 #leave{position:fixed;top:calc(19px + env(safe-area-inset-top,0px));left:12px;display:none;padding:5px 12px;font-size:14px}
+.hostbar{display:inline-block;margin:0 auto 10px;padding:5px 16px;border:1px solid var(--acc);border-radius:16px;font-size:16px;color:var(--acc);background:rgba(255,210,90,.08)}.hostc{border-color:var(--acc)!important;color:var(--acc)!important}
 .chip{display:inline-block;padding:0 8px;border:1px solid var(--mut);border-radius:10px;font-size:13px;color:var(--mut);margin-left:6px}
 @keyframes fade{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
 .aw{opacity:0;animation:fade .6s both}
@@ -288,7 +289,7 @@ function menu(){
   if(el<3.9)setTimeout(menu,(3.9-el)*1000+60);
   if($('back'))$('back').onclick=()=>ws.send('{"t":"back"}');
   return}
- const list=scores.map(p=>`<li>${esc(p[1])}${p[0]==me?' (you)':''}${gm=='r'?'':`<span class="chip">${p[2]=='g'?'wants to be the ghost':'hunter'}</span>`}</li>`).join('');
+ const list=scores.map(p=>`<li>${p[0]==host?'👑 ':''}${esc(p[1])}${p[0]==me?' (you)':''}${p[0]==host?'<span class="chip hostc">host</span>':''}${gm=='r'?'':`<span class="chip">${p[2]=='g'?'wants to be the ghost':'hunter'}</span>`}</li>`).join('');
  const roleBtns=`<div class="row"><button id="rg" class="${mine=='g'?'sel':''}">I’ll be the ghost</button><button id="rh" class="${mine=='h'?'sel':''}">I’ll be a hunter</button></div><p>Players who choose ghost take turns haunting, and everyone else hunts. If nobody picks ghost, everyone takes a turn.</p>`;
  const modeCards=`<div class="modes"><b class="mh">Game mode</b><div class="mrow">${[['r','🎲','Mode 1','Random turns','Everyone takes a turn as the ghost, picked at random'],['c','🎯','Mode 2','Choose your role','Each player picks ghost or hunter']].map(([k,i,n,t,d])=>`<${host==me?'button':'div'} class="mc${gm==k?' sel':''}" data-gm="${k}"><span class="mi">${i}</span><span><b>${n}: ${t}</b><br><small>${d}</small></span></${host==me?'button':'div'}>`).join('')}</div>${host==me?'':'<small class="mn">The host picks the mode.</small>'}</div>`;
  const roles=gm=='r'?`<p>Random mode: you’ll all take turns being the ghost.</p>`:roleBtns;
@@ -297,7 +298,8 @@ function menu(){
   const lv=gm=='r'?rn:bo;
   const len=host==me?`<div class="slw"><b id="slv">${ltxt(lv)}</b><input type="range" id="rsl" min="1" max="10" step="1" value="${lv}"><div class="slt">${[1,2,3,4,5,6,7,8,9,10].map(n=>`<span>${n}</span>`).join('')}</div></div>`:`<p>Match: ${gm=='r'?rn+(rn==1?' round':' rounds')+', most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+((bo>>1)+1)+' rounds)'}</p>`;
   const noG=gm=='c'&&!scores.some(p=>!p[3]&&p[2]=='g');
-  m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${modeCards}${roles}<ol>${list}</ol>${len}`+
+  const hn=(scores.find(p=>p[0]==host)||[])[1],hostBar=hn?`<div class="hostbar">👑 Host: <b>${host==me?'You':esc(hn)}</b></div>`:'';
+  m.innerHTML=`<h1>Waiting room</h1>${hostBar}${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${modeCards}${roles}<ol>${list}</ol>${len}`+
    (host==me?`<button id="go" ${scores.length<2||noG?'disabled':''}>Start the match</button>${scores.length<2?'<p>Needs at least 2 players: 1 ghost and 1 hunter.</p>':noG?'<p>Someone needs to choose “I’ll be the ghost” before the match can start.</p>':''}`:'<p>Waiting for the host to start…</p>')}
  const dt=m.querySelector('details');if(dt)dt.ontoggle=()=>{help=dt.open};
  m.querySelectorAll('button[data-gm]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'gm',v:b.dataset.gm})));
