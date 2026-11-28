@@ -173,7 +173,7 @@ function startMatch(){
  const act=[...P.values()].filter(p=>!p.away);
  if(act.length<2)return;
  if(gm=='c'&&!act.some(p=>p.pref=='g'))return; // choose-your-role mode needs a volunteer ghost
- M={g:0,h:0,t:(bo+1)/2,fin:'',last:'',aw:null,used:new Set(),mode:gm,r:0,rt:rn};
+ M={g:0,h:0,t:(bo>>1)+1,fin:'',last:'',aw:null,used:new Set(),mode:gm,r:0,rt:rn};
  for(const p of P.values()){p.st={dmg:0,fa:0,rv:0};p.pts=0} // match-long stats for the awards
  begin()}
 function leave(p){
@@ -184,6 +184,7 @@ function leave(p){
 function begin(){
  const act=[...P.values()].filter(p=>!p.away);
  if(act.length<2)return toLobby('Not enough players: back to the lobby');
+ if(gm=='c'&&!act.some(p=>p.pref=='g'))return toLobby('No ghost: back to the lobby'); // every round needs a ghost and at least one hunter
  genMap();for(const p of act)send(p,mapMsg());
  // players who chose Ghost take turns haunting; if nobody did, everyone takes turns
  let gp;
@@ -218,14 +219,16 @@ function end(m,k){ // k: h hunters win the round, g ghost wins the round, x canc
  snap();lobby();
  setTimeout(()=>{if(ph!='over')return;if(done)awards();else begin()},done?6000:8000)}
 
+// walking distance (in tiles, 4-way, around corners but never through walls) from a point: the "?" / "!" only count hunters the ghost could reach by an open path
+function walkMap(x,y,max){const m=new Map(),sx=x/T|0,sy=y/T|0;if(sx<0||sy<0||sx>=W||sy>=H)return m;m.set(sy*W+sx,0);const q=[[sx,sy]];for(let i=0;i<q.length;i++){const [cx,cy]=q[i],dd=m.get(cy*W+cx);if(dd>=max)continue;for(const [ax,ay] of [[1,0],[-1,0],[0,1],[0,-1]]){const nx=cx+ax,ny=cy+ay;if(nx<0||ny<0||nx>=W||ny>=H||grid[ny][nx]===1||grid[ny][nx]===2||m.has(ny*W+nx))continue;m.set(ny*W+nx,dd+1);q.push([nx,ny])}}return m}
 function snap(){
- if(!R)return;const g=R.g,all=ph!='play',L=hunters().map(h=>[h.id,h.x|0,h.y|0,+h.ang.toFixed(2),h.on?1:0,h.down?1:0,+h.rev.toFixed(2),Math.round(h.bat),+Math.max(0,h.sup||0).toFixed(1),h.in&&h.in.on&&h.bat<=0?1:0]);
+ if(!R)return;const g=R.g,all=ph!='play',pdm=walkMap(g.x,g.y,7),pd=p=>{const v=pdm.get((p.y/T|0)*W+(p.x/T|0));return v===undefined?99:v},L=hunters().map(h=>[h.id,h.x|0,h.y|0,+h.ang.toFixed(2),h.on?1:0,h.down?1:0,+h.rev.toFixed(2),Math.round(h.bat),+Math.max(0,h.sup||0).toFixed(1),h.in&&h.in.on&&h.bat<=0?1:0]);
  for(const p of P.values()){
   if(p.away)continue;
   const isG=p.id==R.gid,ob=isG||!p.rd||all,d=ob?9999:dist(p,g);
   // the ghost's position is only sent when this player is allowed to see it
   send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||g.vis>0)?[g.x|0,g.y|0]:null,
-   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,gid:R.gid,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,mc:R.mcs.map(m=>[+m.t.toFixed(2),m.c]),mb:R.mb.map(b=>[b.x,b.y,+b.t.toFixed(2)]),ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
+   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,gid:R.gid,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,mc:R.mcs.map(m=>[+m.t.toFixed(2),m.c]),mb:R.mb.map(b=>[b.x,b.y,+b.t.toFixed(2)]),ch:g.charge,dc:g.dcd,near:p.down?0:d<80&&pd(p)<=4?2:d<150&&pd(p)<=7?1:0})}}
 
 setInterval(()=>{
  if(ph!='play')return;
@@ -302,9 +305,9 @@ wss.on('connection',ws=>{
    P.set(p.id,p);send(p,mapMsg());lobby()}
   else if(p&&m.t=='in'){const i=p.in,c=v=>Math.max(-1,Math.min(1,+v||0));i.kx=c(m.kx);i.ky=c(m.ky);i.ang=+m.ang||0;i.on=m.on?1:0;i.dash=m.dash?1:0;i.ch=m.ch?1:0}
   else if(p&&m.t=='role'){p.pref=m.v=='g'?'g':'h';lobby()}
-  else if(p&&m.t=='bo'&&ph=='lobby'&&p.id==hostId()&&[1,3,5,7].includes(+m.v)){bo=+m.v;lobby()}
+  else if(p&&m.t=='bo'&&ph=='lobby'&&p.id==hostId()&&Number.isInteger(+m.v)&&m.v>=1&&m.v<=10){bo=+m.v;lobby()}
   else if(p&&m.t=='gm'&&ph=='lobby'&&p.id==hostId()&&(m.v=='r'||m.v=='c')){gm=m.v;lobby()}
-  else if(p&&m.t=='rn'&&ph=='lobby'&&p.id==hostId()&&[3,5,7,10].includes(+m.v)){rn=+m.v;lobby()}
+  else if(p&&m.t=='rn'&&ph=='lobby'&&p.id==hostId()&&Number.isInteger(+m.v)&&m.v>=1&&m.v<=10){rn=+m.v;lobby()}
   else if(p&&m.t=='leave')leave(p);
   else if(p&&m.t=='back'&&ph=='awards'&&!p.away){p.away=true;if([...P.values()].every(q=>q.away))toLobby('');else lobby()}
   else if(p&&m.t=='start'&&ph=='lobby'&&p.id==hostId())startMatch()});

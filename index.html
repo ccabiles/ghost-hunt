@@ -18,6 +18,7 @@ ol{margin:0;padding:0;list-style-position:inside;columns:2;column-gap:40px;text-
 button,input{font:inherit;font-size:17px;padding:10px 18px;border-radius:8px;border:2px solid var(--acc);background:var(--pnl);color:var(--ink)}
 button{cursor:pointer}button:hover:not(:disabled),button:focus-visible{background:var(--acc);color:#1a1530;outline:none}
 button:disabled{opacity:.4;cursor:default}
+.slw{width:min(340px,86vw);margin:6px auto;text-align:center}.slw b{display:block;font-size:18px;margin-bottom:6px}.slw input{width:100%;accent-color:#b48cff;height:28px;cursor:pointer}.slt{display:flex;justify-content:space-between;font-size:12px;opacity:.7}
 .row{display:flex;gap:12px;flex-wrap:wrap;justify-content:center}
 button.sel{background:var(--acc);color:#1a1530}
 #leave{position:fixed;top:calc(19px + env(safe-area-inset-top,0px));left:12px;display:none;padding:5px 12px;font-size:14px}
@@ -93,6 +94,7 @@ const ws=(()=>{try{if(!/^https?:$/.test(location.protocol)||!location.host)throw
 const wall=(x,y)=>{const tx=x/T|0,ty=y/T|0;return x<0||y<0||tx>=W||ty>=H||grid[ty][tx]};
 // side: 0 top, 1 right, 2 bottom, 3 left. The server sends the window rectangles and the light strips they cast (stopped by walls and furniture)
 let WN=[[],[],[],[]],STRP=[[],[],[],[]];
+const ltxt=v=>gm=='r'?v+(v==1?' round':' rounds'):(v==1?'Quick game (1 round)':'Best of '+v+' (first to '+((v>>1)+1)+')');
 function lg(c,s,x,y,w,h,a,b){const g=s==0?c.createLinearGradient(x,y,x,y+h):s==2?c.createLinearGradient(x,y+h,x,y):s==3?c.createLinearGradient(x,y,x+w,y):c.createLinearGradient(x+w,y,x,y);g.addColorStop(0,a);g.addColorStop(1,b);return g}
 const angd=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
 // beam length and strength shrink with the battery (power 1.0 full .. 0.35 nearly empty)
@@ -291,16 +293,16 @@ function menu(){
  const roles=gm=='r'?`<p>Random mode: you’ll all take turns being the ghost.</p>`:roleBtns;
  if(mp){m.innerHTML=`<h1>Waiting room</h1><p>${mp==2?'The match is over. Other players are still viewing the results, and the lobby opens as soon as everyone is back.':`A match is in progress (${score}). You’ll be back with everyone when this one ends.`} You can change your role for the next match.</p>${roles}<ol>${list}</ol>`}
  else{
-  const len=host==me?(gm=='r'?`<div class="row">${[3,5,7,10].map(v=>`<button data-rn="${v}" class="${rn==v?'sel':''}">${v} rounds</button>`).join('')}</div>`:`<div class="row">${[1,3,5,7].map(v=>`<button data-bo="${v}" class="${bo==v?'sel':''}">${v==1?'Quick game':'Best of '+v}</button>`).join('')}</div>`):`<p>Match: ${gm=='r'?rn+' rounds, most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+(bo+1)/2+' rounds)'}</p>`;
+  const lv=gm=='r'?rn:bo;
+  const len=host==me?`<div class="slw"><b id="slv">${ltxt(lv)}</b><input type="range" id="sl" min="1" max="10" step="1" value="${lv}"><div class="slt"><span>1</span><span>10</span></div></div>`:`<p>Match: ${gm=='r'?rn+(rn==1?' round':' rounds')+', most points wins':bo==1?'quick game (1 round)':'best of '+bo+' (first to '+((bo>>1)+1)+' rounds)'}</p>`;
   const noG=gm=='c'&&!scores.some(p=>!p[3]&&p[2]=='g');
   m.innerHTML=`<h1>Waiting room</h1>${lastM?`<p><b>Last match:</b> ${esc(lastM)}</p>`:''}<details ${help?'open':''}><summary>How to play</summary>${CONTROLS}</details>${modeCards}${roles}<ol>${list}</ol>${len}`+
-   (host==me?`<button id="go" ${scores.length<2||noG?'disabled':''}>Start the match</button>${noG&&scores.length>1?'<p>Someone needs to choose “I’ll be the ghost” before the match can start.</p>':''}`:'<p>Waiting for the host to start…</p>')}
+   (host==me?`<button id="go" ${scores.length<2||noG?'disabled':''}>Start the match</button>${scores.length<2?'<p>Needs at least 2 players: 1 ghost and 1 hunter.</p>':noG?'<p>Someone needs to choose “I’ll be the ghost” before the match can start.</p>':''}`:'<p>Waiting for the host to start…</p>')}
  const dt=m.querySelector('details');if(dt)dt.ontoggle=()=>{help=dt.open};
  m.querySelectorAll('button[data-gm]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'gm',v:b.dataset.gm})));
  if($('rg'))$('rg').onclick=()=>ws.send('{"t":"role","v":"g"}');
  if($('rh'))$('rh').onclick=()=>ws.send('{"t":"role","v":"h"}');
- m.querySelectorAll('[data-rn]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'rn',v:+b.dataset.rn})));
- m.querySelectorAll('[data-bo]').forEach(b=>b.onclick=()=>ws.send(JSON.stringify({t:'bo',v:+b.dataset.bo})));
+ if($('sl')){$('sl').oninput=e=>{$('slv').textContent=ltxt(+e.target.value)};$('sl').onchange=e=>ws.send(JSON.stringify({t:gm=='r'?'rn':'bo',v:+e.target.value}))}
  if($('go'))$('go').onclick=()=>ws.send('{"t":"start"}')}
 function join(){if(ws.readyState==1)ws.send(JSON.stringify({t:'join',name:$('nm').value.trim()||'Player'}))}
 ws.onmessage=e=>{const m=JSON.parse(e.data);
