@@ -81,7 +81,7 @@ html{touch-action:manipulation}
 <script>
 const T=32,RANGE=210,HALF=.42,$=id=>document.getElementById(id),cv=$('c'),ctx=cv.getContext('2d');
 const esc=s=>String(s).replace(/[&<>"']/g,c=>'&#'+c.charCodeAt(0)+';');
-const TOUCH=matchMedia('(pointer:coarse)').matches,CK='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg><em>or</em><svg class="ic" viewBox="0 0 60 44" width="52" height="38"><rect x="2" y="2" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><line x1="2" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="16" r="6" fill="#ffd25a"/></svg><small>aim</small></div><div class="ct"><i class="k  wide">Space</i><em>or</em><span class="clk"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg></span><small>hold = 🔦 light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><i class="k  wide">Shift</i><small>dash</small></div><div class="ct"><span class="hold">hold</span><i class="k">E</i><small>drain batteries</small></div></div><div class="gc wide foot"><span><i class="k">M</i> <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div>';
+const TOUCH=matchMedia('(pointer:coarse)').matches,CK='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg><em>or</em><svg class="ic" viewBox="0 0 60 44" width="52" height="38"><rect x="2" y="2" width="56" height="40" rx="7" fill="none" stroke="currentColor" stroke-width="3"/><line x1="2" y1="32" x2="58" y2="32" stroke="currentColor" stroke-width="2"/><circle cx="30" cy="16" r="6" fill="#ffd25a"/></svg><small>aim</small></div><div class="ct"><i class="k  wide">Space</i><em>or</em><span class="clk"><svg class="ic" viewBox="0 0 40 56" width="34" height="48"><rect x="3" y="3" width="34" height="50" rx="17" fill="none" stroke="currentColor" stroke-width="3"/><line x1="20" y1="3" x2="20" y2="24" stroke="currentColor" stroke-width="3"/><path d="M20 3 A17 17 0 0 0 3 20 V24 H20Z" fill="#ffd25a"/></svg></span><small>hold = 🔦 light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><span class="dp"><span class="r1"><i class="k">W</i></span><span><i class="k">A</i><i class="k">S</i><i class="k">D</i></span></span><em>or</em><span class="dp"><span class="r1"><i class="k">↑</i></span><span><i class="k">←</i><i class="k">↓</i><i class="k">→</i></span></span><small>move</small></div><div class="ct"><i class="k  wide">Shift</i><small>dash</small></div><div class="ct"><span class="hold">hold</span><i class="k">E</i><small>magic circles</small></div></div><div class="gc wide foot"><span><i class="k">M</i> <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div>';
 const CT='<div class="guide"><div class="gc"><h3>🔦 Hunters</h3><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>left thumb</em><small>move</small></div><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>right thumb</em><small>aim + hold = light</small></div><div class="leg"><span><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#8a85a8"/></svg><b>→</b>🔦<b>→</b><svg class="ic" viewBox="0 0 24 22" width="22" height="20"><path d="M12 21 3 12C-1 7 4 0 9 3l3 3 3-3c5-3 10 4 6 9z" fill="#ff4f6d"/></svg></span><span><i class="bt"></i> +</span><span><i class="bt sbt"></i> ★</span></div></div><div class="gc"><h3>👻 Ghost</h3><div class="ct"><svg class="ic" viewBox="0 0 44 44" width="40" height="40"><circle cx="22" cy="22" r="19" fill="none" stroke="currentColor" stroke-width="3"/><circle cx="22" cy="22" r="8" fill="#ffd25a"/></svg><em>left thumb</em><small>move</small></div><div class="ct"><i class="k wide">DASH</i><small>tap</small></div><div class="ct"><i class="k wide">MAGIC</i><small>hold, then let go</small></div></div><div class="gc wide foot"><span>🔊 <small>sound</small></span><span>⚡ <small>lightning reveals the ghost</small></span><span>🗺️ <small>new map each game</small></span></div></div></div>';
 const CONTROLS=TOUCH?CT:CK;
 let edges=null,grid=null,W=0,H=0,PW=0,PH=0,base=null,sc=1,ox=0,oy=0;
@@ -181,7 +181,9 @@ function art(g,t,cw,ch,v,R){const W_=cw*T,H_=ch*T;
  case 'piano':{g.fillStyle='#14121a';rr(0,1,W_,T-2,3);g.fill();g.fillStyle='#e8e4da';g.fillRect(3,T-12,W_-6,9);g.fillStyle='#14121a';for(let i=0;i<W_/4.2;i++)if(i%7!=2&&i%7!=6)g.fillRect(5+i*4.2,T-12,2.4,5);g.fillStyle='rgba(255,255,255,.12)';g.fillRect(0,1,W_,3);break}
  case 'grand':{g.fillStyle='#101018';g.beginPath();g.moveTo(1,1);g.lineTo(W_-1,1);g.lineTo(W_-1,H_*.45);g.quadraticCurveTo(W_*.8,H_*.62,W_*.62,H_-2);g.quadraticCurveTo(W_*.4,H_-12,W_*.1,H_*.8);g.lineTo(1,H_*.8);g.closePath();g.fill();g.strokeStyle='#050509';g.lineWidth=2;g.stroke();
   g.fillStyle='#e8e4da';g.fillRect(4,H_*.55,W_*.5,7);g.fillStyle='#101018';for(let i=0;i<10;i++)if(i%7!=2&&i%7!=6)g.fillRect(6+i*4.6,H_*.55,2.6,4);g.fillStyle='rgba(255,255,255,.14)';g.beginPath();g.moveTo(4,4);g.lineTo(W_-4,4);g.lineTo(W_-4,H_*.3);g.lineTo(4,H_*.2);g.fill();break}}}
+let LIGHTS=[],SCONCES=[];
 function buildMap(rows,seed,ob,ru,rm){
+ SCONCES=[];
  grid=rows.map(r=>[...r].map(Number));H=grid.length;W=grid[0].length;PW=W*T;PH=H*T;
  base=document.createElement('canvas');base.width=fog.width=PW;base.height=fog.height=PH;const bc=base.getContext('2d'),R=rng(seed);
  edges=document.createElement('canvas');edges.width=PW;edges.height=PH;const ec=edges.getContext('2d');
@@ -219,7 +221,7 @@ function buildMap(rows,seed,ob,ru,rm){
    if(R()<.08){bc.fillStyle='rgba(90,130,100,.14)';bc.beginPath();bc.arc(px+R()*T,py+R()*T,7+R()*6,0,7);bc.fill()}
    if(v==1&&y+1<H&&tt[y+1][x]&&!isW(x-1,y+1)&&R()<.13){ // framed portrait
     bc.fillStyle='#c9a24a';bc.fillRect(px+8,py+3,16,19);bc.fillStyle='#120a05';bc.fillRect(px+10,py+5,12,15);bc.fillStyle=R()<.5?'#3a4a62':'#5a3a3a';bc.fillRect(px+10,py+5,12,15);bc.fillStyle='#d8b890';bc.beginPath();bc.arc(px+16,py+11,3.4,0,7);bc.fill();bc.fillStyle='#1a1424';bc.beginPath();bc.ellipse(px+16,py+19,5.4,4,0,Math.PI,0);bc.fill()}
-   else if(v==1&&y+1<H&&tt[y+1][x]&&R()<.07){bc.fillStyle='#c9a24a';bc.fillRect(px+14,py+14,4,6);bc.fillRect(px+11,py+19,10,2);flameW(px+16,py+10);const gr2=bc.createRadialGradient(px+16,py+12,0,px+16,py+12,40);gr2.addColorStop(0,'rgba(255,170,70,.25)');gr2.addColorStop(1,'rgba(255,170,70,0)');bc.save();bc.globalCompositeOperation='lighter';bc.fillStyle=gr2;bc.fillRect(px-24,py-24,80,80);bc.restore()}}
+   else if(v==1&&y+1<H&&tt[y+1][x]&&R()<.07){bc.fillStyle='#c9a24a';bc.fillRect(px+14,py+14,4,6);bc.fillRect(px+11,py+19,10,2);flameW(px+16,py+10);SCONCES.push([px+16,py+T+4]);const gr2=bc.createRadialGradient(px+16,py+12,0,px+16,py+12,40);gr2.addColorStop(0,'rgba(255,170,70,.25)');gr2.addColorStop(1,'rgba(255,170,70,0)');bc.save();bc.globalCompositeOperation='lighter';bc.fillStyle=gr2;bc.fillRect(px-24,py-24,80,80);bc.restore()}}
   else{bc.fillStyle='#211a2b';bc.fillRect(px,py,T,T);bc.fillStyle='rgba(255,255,255,.05)';bc.fillRect(px,py,T,2);bc.fillStyle='rgba(0,0,0,.35)';bc.fillRect(px,py+T-2,T,2);if(!isW(x,y-1)){bc.fillStyle='rgba(255,255,255,.07)';bc.fillRect(px,py,T,3)}}
   if(v==2){bc.fillStyle='#0e0b1c';bc.fillRect(px+1,py+1,T-2,T-2);const gl=bc.createLinearGradient(px,py,px+T,py+T);gl.addColorStop(0,'#8fb2ee');gl.addColorStop(1,'#4a66a6');bc.fillStyle=gl;bc.fillRect(px+4,py+4,T-8,T-8);bc.fillStyle='rgba(255,255,255,.3)';bc.beginPath();bc.moveTo(px+6,py+6);bc.lineTo(px+14,py+6);bc.lineTo(px+6,py+18);bc.fill();
    bc.fillStyle='#3a2a1e';bc.fillRect(px+T/2-1.5,py+4,3,T-8);bc.fillRect(px+4,py+T/2-1.5,T-8,3);bc.strokeStyle='#5a4230';bc.lineWidth=2;bc.strokeRect(px+2,py+2,T-4,T-4);
@@ -235,6 +237,19 @@ function buildMap(rows,seed,ob,ru,rm){
   if(pass){bc.fillStyle='rgba(0,0,0,.4)';bc.beginPath();if(ROUNDT.has(t))bc.ellipse((x+w/2)*T+2,(y+h/2)*T+4,w*T*.42,h*T*.42,0,0,7);else bc.roundRect(x*T+3,y*T+4,w*T,h*T,5);bc.fill()}
   else if(t=='chair'||t=='stool'){bc.fillStyle='rgba(0,0,0,.3)';bc.beginPath();bc.roundRect(x*T+5,y*T+6,22,22,5);bc.fill()}
   const cw=r%2?h:w,ch=r%2?w:h;bc.save();bc.translate((x+w/2)*T,(y+h/2)*T);bc.rotate(r*Math.PI/2);bc.translate(-cw*T/2,-ch*T/2);art(bc,t,cw,ch,v,R);bc.restore()}
+ // ---- light sources (candles, fireplaces, lamps, sconces): each gets its own pool of light that wall corners can block ----
+ LIGHTS=[];
+ const addL=(x,y,r,col,fl)=>{const pts=[],n=44;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a);let d=4;while(d<r){const tx=Math.floor((x+dx*d)/T),ty=Math.floor((y+dy*d)/T);if(ty<0||tx<0||ty>=H||tx>=W||grid[ty][tx]==1||grid[ty][tx]==2)break;d+=5}pts.push([x+dx*Math.min(d,r),y+dy*Math.min(d,r)])}
+  LIGHTS.push({x,y,r,col,fl,pts,ph:Math.random()*20})};
+ const lp=(o,lx,ly)=>{const[,x,y,w,h,r]=o,cw=r%2?h:w,ch=r%2?w:h,dx=lx-cw*T/2,dy=ly-ch*T/2,[rx,ry]=[[dx,dy],[-dy,dx],[-dx,-dy],[dy,-dx]][r];return[(x+w/2)*T+rx,(y+h/2)*T+ry]};
+ for(const o of ob||[]){const t=o[0],W_=(o[5]%2?o[4]:o[3])*T;
+  if(t=='stable'||t=='nstand')addL(...lp(o,16,t=='stable'?8:7),88,'255,170,70',1);
+  else if(t=='altar'){addL(...lp(o,9,6),80,'255,150,60',1);addL(...lp(o,W_-9,6),80,'255,150,60',1)}
+  else if(t=='sideb'){addL(...lp(o,9,1),80,'255,170,70',1);addL(...lp(o,W_-9,1),80,'255,170,70',1)}
+  else if(t=='dtable')addL(...lp(o,W_/2,(o[5]%2?o[3]:o[4])*T/2),125,'255,175,80',1);
+  else if(t=='fire')addL(...lp(o,W_/2,T+6),175,'255,120,40',2);
+  else if(t=='poolt')addL(...lp(o,W_/2,(o[5]%2?o[3]:o[4])*T/2),140,'255,240,200',0)}
+ for(const[x,y]of SCONCES)addL(x,y,92,'255,170,70',1);
  // cobwebs in some corners
  const web=(cx,cy,sx,sy,L)=>{bc.strokeStyle='rgba(225,225,240,.3)';bc.lineWidth=1;
   for(let i=0;i<=4;i++){const a=i*Math.PI/8;bc.beginPath();bc.moveTo(cx,cy);bc.lineTo(cx+sx*Math.cos(a)*L,cy+sy*Math.sin(a)*L);bc.stroke()}
@@ -292,8 +307,12 @@ ws.onmessage=e=>{const m=JSON.parse(e.data);
  if(m.t=='m'){WN=m.wn;STRP=m.st;for(const k in D)delete D[k];DG.vis=0;buildMap(m.g,m.sd,m.ob,m.ru,m.rm)}
  else if(m.t=='l'){me=m.me;host=m.host;ph=m.ph;msg=m.msg;scores=m.ps;ms=m.ms;fin=m.fin;lastM=m.last;bo=m.bo;rn=m.rn||5;rd=m.rd||[0,5];md=m.md||'c';gm=m.gm||'c';mp=m.mp;aw=m.aw;if(ph!='awards')awT=0;if(ph=='play'&&me)musStart();else musStop();m.ps.forEach(p=>names[p[0]]=p[1]);menu()}
  else if(m.t=='full')alert('The game is full (15 players).');
- else if(m.t=='s'){const pS=S;sfxScan(pS,m);S=m;
-  for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];d.down=h[5];d.rev=h[6];d.bat=h[7];d.sup=h[8]||0;d.id=h[0]}
+ else if(m.t=='s'){const pS=S;sfxScan(pS,m);if(m.mb&&m.mb.length&&!(pS&&pS.mb&&pS.mb.length))sfx('zap',.8);S=m;
+  for(const h of m.hs){const d=D[h[0]]||(D[h[0]]={x:h[1],y:h[2]});d.tx=h[1];d.ty=h[2];d.ang=h[3];d.on=h[4];if(h[5]&&!d.down)d.f0=Date.now();
+   // the battery icon pops up for 3s: on a pickup, when charge drops to 20%, and when the light is pressed with an empty battery
+   if(d.bat!=null&&!d.down&&!h[5]){const ns=h[8]||0;if(h[7]>d.bat+.5||(ns>0&&!(d.sup>0))||(d.bat>20&&h[7]<=20))d.bt=Date.now()}
+   if(h[9]&&!d.dz)d.bt=Date.now();d.dz=h[9]||0;
+   d.down=h[5];d.rev=h[6];d.bat=h[7];d.sup=h[8]||0;d.id=h[0]}
   if(m.g){if(!DG.vis){DG.x=m.g[0];DG.y=m.g[1]}DG.tx=m.g[0];DG.ty=m.g[1];DG.vis=1}else DG.vis=0}};
 ws.onclose=()=>{$('menu').style.display='flex';$('mc').innerHTML='<h1>Disconnected</h1><p>Reload the page to reconnect.</p>'};
 // Background music: a 64s loop played with Web Audio so copies can overlap and cross-fade (no gap at the loop point)
@@ -305,7 +324,7 @@ function musInit(){
  if(MUS.ctx)return;
  try{const C=window.AudioContext||window.webkitAudioContext;MUS.ctx=new C();MUS.master=MUS.ctx.createGain();MUS.master.gain.value=0;MUS.master.connect(MUS.ctx.destination);
   MUS.sfx=MUS.ctx.createGain();MUS.sfx.gain.value=1;MUS.sfx.connect(MUS.ctx.destination);
-  for(const n of['click','dead','powerup','super','zap','thunder','faint'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
+  for(const n of['click','dead','powerup','super','zap','thunder','faint','laugh'])dec('/audio/sfx-'+n+'.mp3').then(b=>{SFXB[n]=b}).catch(()=>{});
   for(let i=1;i<=8;i++)dec('/audio/sfx-thunder-'+i+'.mp3').then(b=>{SFXB['th'+i]=b}).catch(()=>{}); // recorded thunder: one is picked at random for each strike
   if(MUS.on)musLoad()}catch(e){MUS.ctx=null}}
 // load the track chosen for this round (each new round plays the next one), then start looping it
@@ -405,6 +424,23 @@ function ghostShape(x,y){ctx.fillStyle='#ffd25a';ctx.beginPath();ctx.arc(x,y-3,1
  ctx.closePath();ctx.fill();ctx.fillStyle='#221c3a';ctx.fillRect(x-5,y-6,3,5);ctx.fillRect(x+2,y-6,3,5)}
 function bar(x,y,w,f,col,label){ctx.fillStyle='#2a2548';ctx.fillRect(x,y,w,12);ctx.fillStyle=col;ctx.fillRect(x,y,w*Math.max(0,Math.min(1,f)),12);ctx.fillStyle='#ece9fa';ctx.font='13px Georgia';ctx.textAlign='left';ctx.fillText(label,x,y-5)}
 
+
+// ghost magic circles (radius MCR must match the server): ghostly purple rune circles, clipped by walls, pulsing faster until they go off
+const MCR=130,MCT=3;
+function visPoly(x,y,r){const pts=[],n=48;for(let i=0;i<n;i++){const a=i/n*Math.PI*2,dx=Math.cos(a),dy=Math.sin(a);let d=3;while(d<r){const tx=Math.floor((x+dx*d)/T),ty=Math.floor((y+dy*d)/T);if(ty<0||tx<0||ty>=H||tx>=W||grid[ty][tx]==1||grid[ty][tx]==2)break;d+=5}pts.push([x+dx*Math.min(d,r),y+dy*Math.min(d,r)])}return pts}
+let laughed=false;
+function drawMagic(){const tm=Date.now()/1000;
+ for(const[t,cs]of S.mc||[])for(const[x,y]of cs){const f=Math.min(1,t/.7),k=t/MCT,pulse=.5+.5*Math.sin(t*(4+k*16));
+  ctx.save();ctx.globalAlpha=f;ctx.beginPath();visPoly(x,y,MCR).forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.clip();
+  const gr=ctx.createRadialGradient(x,y,0,x,y,MCR);gr.addColorStop(0,`rgba(120,60,230,${.16+.2*k})`);gr.addColorStop(.75,`rgba(150,90,255,${.22+.2*k+.1*pulse})`);gr.addColorStop(1,`rgba(200,150,255,${.5+.3*pulse})`);ctx.fillStyle=gr;ctx.fillRect(x-MCR,y-MCR,2*MCR,2*MCR);
+  ctx.strokeStyle=`rgba(215,180,255,${.55+.35*pulse})`;ctx.lineWidth=2.5;ctx.beginPath();ctx.arc(x,y,MCR-2,0,7);ctx.stroke();
+  ctx.setLineDash([10,9]);ctx.lineDashOffset=-tm*28;ctx.lineWidth=1.6;ctx.strokeStyle='rgba(200,160,255,.65)';ctx.beginPath();ctx.arc(x,y,MCR*.8,0,7);ctx.stroke();ctx.setLineDash([]);
+  ctx.save();ctx.translate(x,y);ctx.rotate(tm*.5+x);ctx.strokeStyle=`rgba(225,200,255,${.4+.3*pulse})`;ctx.lineWidth=1.8;ctx.beginPath();for(let i=0;i<=5;i++){const a=i*Math.PI*4/5-Math.PI/2,px=Math.cos(a)*MCR*.55,py=Math.sin(a)*MCR*.55;i?ctx.lineTo(px,py):ctx.moveTo(px,py)}ctx.stroke();ctx.beginPath();ctx.arc(0,0,MCR*.55,0,7);ctx.stroke();ctx.restore();
+  for(let i=0;i<9;i++){const ph=(i*.37+tm*.22+x*.01)%1,a=i*.7+tm*.4,rr=MCR*(.15+.75*((i*.61)%1)),px=x+Math.cos(a)*rr,py=y+Math.sin(a)*rr-ph*26;ctx.fillStyle=`rgba(230,210,255,${.5*(1-ph)})`;ctx.beginPath();ctx.arc(px,py,2+2*(1-ph),0,7);ctx.fill()}
+  ctx.restore()}
+ for(const[x,y,t]of S.mb||[]){const p=1-t/.7;ctx.save();ctx.beginPath();visPoly(x,y,MCR).forEach(([a,b],i)=>i?ctx.lineTo(a,b):ctx.moveTo(a,b));ctx.closePath();ctx.clip();
+  const gr=ctx.createRadialGradient(x,y,0,x,y,MCR);gr.addColorStop(0,`rgba(255,255,255,${.7*(1-p)})`);gr.addColorStop(.6,`rgba(190,130,255,${.55*(1-p)})`);gr.addColorStop(1,`rgba(150,90,255,${.3*(1-p)})`);ctx.fillStyle=gr;ctx.fillRect(x-MCR,y-MCR,2*MCR,2*MCR);
+  ctx.strokeStyle=`rgba(235,215,255,${1-p})`;ctx.lineWidth=4;ctx.beginPath();ctx.arc(x,y,MCR*(.5+.5*p),0,7);ctx.stroke();ctx.restore()}}
 function draw(dt){
  const d=devicePixelRatio||1,top=68,vw=innerWidth,vh=innerHeight;
  if(cv.width!=vw*d||cv.height!=vh*d){cv.width=vw*d;cv.height=vh*d}
@@ -425,9 +461,16 @@ function draw(dt){
   glow(my.x,my.y,70);
   for(const h of hs){if(h!==my)glow(h.x,h.y,22);
    if(h.on&&!h.down){const pwr=power(h),gr=fc.createRadialGradient(h.x,h.y,0,h.x,h.y,RANGE*pwr*(h.sup>0?1.3:1));gr.addColorStop(0,`rgba(0,0,0,${pwr})`);gr.addColorStop(1,`rgba(0,0,0,${.25*pwr})`);fc.fillStyle=gr;fc.beginPath();cone(h).forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}}
+  const tm=Date.now()/1000;
+  for(const L of LIGHTS){const f=L.fl?1+(L.fl==2?.1:.07)*Math.sin(tm*7+L.ph)+.05*Math.sin(tm*13.3+L.ph*2):1,r=L.r*f,gr=fc.createRadialGradient(L.x,L.y,0,L.x,L.y,r);
+   gr.addColorStop(0,'rgba(0,0,0,.92)');gr.addColorStop(.55,'rgba(0,0,0,.55)');gr.addColorStop(1,'rgba(0,0,0,0)');fc.fillStyle=gr;fc.beginPath();L.pts.forEach(([x,y],i)=>i?fc.lineTo(x,y):fc.moveTo(x,y));fc.fill()}
   if(act)for(const[x,y,w,h]of STRP[lt[0]]){fc.fillStyle=lg(fc,lt[0],x,y,w,h,'rgba(0,0,0,.95)','rgba(0,0,0,.45)');fc.fillRect(x,y,w,h)}
   ctx.drawImage(fog,0,0);ctx.globalAlpha=.6;ctx.drawImage(edges,0,0);ctx.globalAlpha=1;
+  ctx.save();ctx.globalCompositeOperation='lighter';
+  for(const L of LIGHTS){const f=L.fl?1+(L.fl==2?.1:.07)*Math.sin(tm*7+L.ph)+.05*Math.sin(tm*13.3+L.ph*2):1,gr=ctx.createRadialGradient(L.x,L.y,0,L.x,L.y,L.r*f);gr.addColorStop(0,`rgba(${L.col},.30)`);gr.addColorStop(1,`rgba(${L.col},0)`);ctx.fillStyle=gr;ctx.beginPath();L.pts.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.fill()}
+  ctx.restore();
   if(S.near){ctx.font='bold 26px Georgia';ctx.textAlign='center';ctx.fillStyle=S.near==2?'#ff6b8b':'#ffd25a';ctx.fillText(S.near==2?'!':'?',my.x,my.y-24)}}
+ drawMagic();
  // always visible (drawn over the fog): batteries, hearts over fainted hunters, the revealed ghost, start-of-round name tags
  for(const p of S.pk){const pl=.6+.4*Math.sin(Date.now()/(p.s?160:250));
   if(p.s){ctx.fillStyle=`rgba(74,168,255,${.3*pl})`;ctx.beginPath();ctx.arc(p.x,p.y,30,0,7);ctx.fill();ctx.fillStyle=`rgba(140,210,255,${.25*pl})`;ctx.beginPath();ctx.arc(p.x,p.y,23,0,7);ctx.fill();
@@ -442,6 +485,22 @@ function draw(dt){
   if(!h.down){ctx.fillStyle='#fff';ctx.beginPath();ctx.arc(h.x+Math.cos(h.ang)*6,h.y+Math.sin(h.ang)*6,3.5,0,7);ctx.fill()}
   if(h.id==me){ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.beginPath();ctx.arc(h.x,h.y,14,0,7);ctx.stroke()}}
  for(const h of hs)if(h.down)heart(h.x+18,h.y-22,13,h.rev);
+ for(const h of hs)if(!h.down&&h.bt){ // battery icon above a hunter: green, red at 20% or less, glowing blue with a super battery
+  const t=(Date.now()-h.bt)/1000;if(t>3)continue;const a=Math.min(1,t/.15,(3-t)/.5),sup=h.sup>0,low=h.bat<=20,f=Math.max(0,Math.min(1,h.bat/(sup?150:100))),bx=h.x+12,by=h.y-30,col=sup?'#4aa8ff':low?'#ff4f6d':'#7cf2a0';
+  ctx.save();ctx.globalAlpha=a;if(sup){ctx.shadowColor='#6cc0ff';ctx.shadowBlur=10+6*Math.sin(Date.now()/130)}else if(low){ctx.shadowColor='#ff4f6d';ctx.shadowBlur=6}
+  ctx.fillStyle='rgba(12,10,24,.82)';ctx.beginPath();ctx.roundRect(bx-2,by-2,28,15,4);ctx.fill();ctx.shadowBlur=sup?ctx.shadowBlur:0;
+  ctx.strokeStyle=col;ctx.lineWidth=1.6;ctx.beginPath();ctx.roundRect(bx,by,22,11,3);ctx.stroke();ctx.fillStyle=col;ctx.fillRect(bx+23,by+3,2.4,5);
+  if(f>0){ctx.beginPath();ctx.roundRect(bx+2,by+2,18*f,7,1.5);ctx.fill();ctx.fillStyle='rgba(255,255,255,.35)';ctx.fillRect(bx+2,by+2,18*f,2)}
+  if(sup){ctx.shadowBlur=0;ctx.fillStyle='#bfe2ff';ctx.font='bold 10px Georgia';ctx.fillText(`${Math.ceil(h.sup)}s`,bx+27,by+9)}
+  ctx.restore()}
+ for(const h of hs)if(h.down){ // cloudy "help me" bubble: shown 2s out of every 10s so other hunters can spot who needs a revive
+  const t=((Date.now()-(h.f0||0))/1000)%10,cyc=Math.floor((Date.now()-(h.f0||0))/10000);if(t>=2)continue;
+  const a=Math.min(1,t/.2,(2-t)/.25),txt=['help me...','need light...','anybody?','my heart...'][(cyc+(h.id||0))%4],bx=h.x-26,by=h.y-40+Math.sin(t*3)*1.5;
+  ctx.save();ctx.globalAlpha=a;ctx.font='italic 13px Georgia';const w=Math.max(54,ctx.measureText(txt).width+18);
+  ctx.fillStyle='rgba(235,238,250,.95)';for(const[dx,dy,r]of[[-w*.38,0,10],[-w*.15,-6,12],[w*.12,-6,12],[w*.36,0,10],[-w*.2,5,9],[0,6,10],[w*.22,5,9]]){ctx.beginPath();ctx.arc(bx+dx,by+dy,r,0,7);ctx.fill()}
+  ctx.fillRect(bx-w*.36,by-4,w*.72,10);ctx.beginPath();ctx.arc(bx+w*.36,by+3,8,0,7);ctx.arc(bx-w*.36,by+3,8,0,7);ctx.fill();
+  ctx.beginPath();ctx.arc(bx+10,by+17,3.6,0,7);ctx.fill();ctx.beginPath();ctx.arc(bx+16,by+24,2.2,0,7);ctx.fill();
+  ctx.fillStyle='#3a3552';ctx.textAlign='center';ctx.fillText(txt,bx,by+4);ctx.textAlign='left';ctx.restore()}
  if(DG.vis){const gl=ctx.createRadialGradient(DG.x,DG.y,2,DG.x,DG.y,30);gl.addColorStop(0,'rgba(255,210,90,.45)');gl.addColorStop(1,'rgba(255,210,90,0)');ctx.fillStyle=gl;ctx.beginPath();ctx.arc(DG.x,DG.y,30,0,7);ctx.fill();ghostShape(DG.x,DG.y)}
  if(S.ph=='play'&&el<5){const a=Math.max(0,Math.min(1,5-el));ctx.globalAlpha=a;ctx.font='bold 13px Georgia';ctx.textAlign='center';ctx.lineWidth=3;ctx.strokeStyle='rgba(0,0,0,.85)';ctx.fillStyle='#ece9fa';
   for(const h of hs){const n=names[h.id]||'';ctx.strokeText(n,h.x,h.y+27);ctx.fillText(n,h.x,h.y+27)}
@@ -451,8 +510,13 @@ function draw(dt){
   if(warn){ctx.fillStyle=`rgba(190,220,255,${.35+.35*Math.sin(lt[1]*22)})`;for(const[x,y,w,h]of WN[s])ctx.fillRect(x,y,w,h)}
   else if(act){for(const[x,y,w,h]of STRP[s]){ctx.fillStyle=lg(ctx,s,x,y,w,h,'rgba(200,225,255,.55)','rgba(200,225,255,.12)');ctx.fillRect(x,y,w,h)}
    if(lt[1]<1.7){ctx.fillStyle=`rgba(255,255,255,${(1.7-lt[1])*.5})`;ctx.fillRect(0,0,PW,PH)}}}
- if(S.ring>0){ctx.fillStyle=`rgba(150,90,255,${S.ring*.6})`;ctx.fillRect(0,0,PW,PH)}
+ 
  ctx.setTransform(d,0,0,d,0,0);ctx.font='15px Georgia';ctx.textAlign='left';ctx.fillStyle='#ece9fa';
+ // the monster laugh starts as the ghost banner fades, just before the lights go out and the ghost vanishes
+ if(S.ph=='play'){if(el<1)laughed=false;else if(!laughed&&el>=4.6&&el<7){laughed=true;sfx('laugh',.9)}}
+ if(S.ph=='play'&&el>=0&&el<5){ // start of round: announce who the ghost is while the mansion is lit; the ghost vanishes when the banner ends
+  const gn=S.role=='ghost'?'You are':`${((scores.find(p=>p[0]==S.gid)||[])[1])||'A player'} is`,a=Math.min(1,el/.4,(5-el)/.6);
+  ctx.fillStyle=`rgba(20,8,24,${.78*a})`;ctx.fillRect(0,vh*.36,vw,72);ctx.fillStyle=`rgba(196,150,255,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${gn} the Ghost!`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
  if(S.al&&S.al[0]>0){const[n,t]=S.al,a=Math.min(1,t/.6);ctx.fillStyle=`rgba(20,8,24,${.75*a})`;ctx.fillRect(0,vh*.36,vw,72);
   ctx.fillStyle=`rgba(255,107,139,${a})`;ctx.font='bold 40px Georgia';ctx.textAlign='center';ctx.fillText(`${n} Hunter${n==1?'':'s'} Left`,vw/2,vh*.36+50);ctx.textAlign='left';ctx.font='15px Georgia';ctx.fillStyle='#ece9fa'}
  const m=Math.max(0,S.time),dn=S.hs.filter(h=>h[5]).length;
@@ -464,8 +528,7 @@ function draw(dt){
   rows.forEach((r,ri)=>{let tw=r.reduce((a,c2)=>a+c2.w+6,-6),x=(vw-tw)/2;const y=70+ri*22;
    for(const ch of r){ctx.fillStyle='rgba(27,24,50,.82)';ctx.strokeStyle=ch.p[0]==me?'#ffd25a':'#3a3560';ctx.lineWidth=1.5;ctx.beginPath();ctx.roundRect(x,y,ch.w,19,9);ctx.fill();ctx.stroke();ctx.fillStyle='#ece9fa';ctx.fillText(ch.t,x+8,y+14);x+=ch.w+6}})}
  bar(vw-220,22,200,S.hp/S.mx,'#ffd25a','Ghost health');
- if(S.role=='hunter')bar(vw-220,50,200,Math.min(1,S.bat/(my&&my.sup>0?150:100)),my&&my.sup>0?'#4aa8ff':S.bat<30?'#ff6b8b':'#7cf2a0',my&&my.down?'You fainted: wait for a revive':my&&my.sup>0?`SUPER ${Math.ceil(my.sup)}s  Battery: ${Math.ceil(S.bat*.3)}s`:`Battery: ${Math.ceil(S.bat*.3)}s`);
- else if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff',(TOUCH?'Magic (hold the button)':'Magic (hold E)'));ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
+ if(S.role=='ghost'){if(S.st){ctx.fillStyle='#ffd25a';ctx.font='bold 18px Georgia';ctx.textAlign='center';ctx.fillText('Stunned!',vw/2,96)}bar(vw-220,50,200,S.ch,'#b48cff',(TOUCH?'Magic (hold the button)':'Magic (hold E)'));ctx.fillStyle=S.dc<=0?'#7cf2a0':'#6b6684';ctx.fillText('Dash',vw-268,61)}}
 let last=0;
 (function loop(t){const dt=Math.min(.05,(t-last)/1000||0);last=t;draw(dt);requestAnimationFrame(loop)})(0);
 </script></body></html>

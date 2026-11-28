@@ -141,6 +141,14 @@ const move=(e,dx,dy)=>{if(!blocked(e.x+dx,e.y,e.r))e.x+=dx;if(!blocked(e.x,e.y+d
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const angd=(a,b)=>{let d=a-b;while(d>Math.PI)d-=2*Math.PI;while(d<-Math.PI)d+=2*Math.PI;return d};
 function los(a,b,c,d){const n=Math.hypot(c-a,d-b)/6|0;for(let i=1;i<n;i++)if(wall(a+(c-a)*i/n,b+(d-b)*i/n))return false;return true}
+// ghost magic: 4 purple circles appear near the hunters; MCT seconds later anyone inside one (radius MCR) loses all battery
+const MCR=130,MCT=3;
+const losW=(a,b,c,d)=>{const n=Math.hypot(c-a,d-b)/6|0;for(let i=1;i<n;i++){const v=wall(a+(c-a)*i/n,b+(d-b)*i/n);if(v===1||v===2||v===true)return false}return true};
+function castMagic(hs,g){const alive=hs.filter(h=>!h.down),pool=alive.length?alive:hs.length?hs:[g],cs=[];
+ for(let i=0;i<4;i++){const h=pool[Math.random()*pool.length|0];let c=null;
+  for(let a=0;a<40&&!c;a++){const an=Math.random()*6.283,d=Math.random()*150,x=h.x+Math.cos(an)*d,y=h.y+Math.sin(an)*d,tx=x/T|0,ty=y/T|0;if(grid[ty]&&grid[ty][tx]===0)c=[x|0,y|0]}
+  if(!c){const[x,y]=tc(pick(()=>true));c=[x|0,y|0]}cs.push(c)}
+ R.mcs.push({t:0,c:cs})}
 // a flashlight gets shorter and weaker as its battery drains: power runs from 1.0 (full) down to 0.35 (nearly empty)
 const pw=h=>.35+.65*Math.max(0,Math.min(100,h.bat))/100;
 const SUPT=30,sk=h=>h.sup>0?1.3:1,wt=h=>pw(h)*(h.sup>0?1.25:1);
@@ -186,7 +194,7 @@ function begin(){
  else{const vol=act.filter(p=>p.pref=='g'),pool=vol.length?vol:act;gp=pool.find(p=>p.id>lastG)||pool[0]}
  lastG=gp.id;
  const gid=gp.id,n=act.length-1,[gx,gy]=tc(FL.reduce((a,b)=>Math.hypot(b[0]*T+T/2-W*T/2,b[1]*T+T/2-H*T/2)<Math.hypot(a[0]*T+T/2-W*T/2,a[1]*T+T/2-H*T/2)?b:a)),hp=80+14*n;
- R={gid,time:180,lt:null,nf:10,ring:0,pk:[],spawn:5,al:null,K:Math.min(6,Math.max(3,Math.ceil(n/3))),g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:5,fcd:0}}; // the ghost starts in the middle of the map, visible for 5s
+ R={gid,time:180,lt:null,nf:10,ring:0,mcs:[],mb:[],pk:[],spawn:5,al:null,K:Math.min(6,Math.max(3,Math.ceil(n/3))),g:{x:gx,y:gy,r:9,hp,max:hp,dash:0,dcd:0,charge:0,lit:0,stun:0,vis:5,fcd:0}}; // the ghost starts in the middle of the map, visible for 5s
  for(let i=0;i<R.K;i++){const[x,y]=tc(pick(()=>true));R.pk.push({x,y})}
  R.sp=25+Math.random()*20;
  for(const p of P.values()){p.rd=!p.away;p.down=false;p.rev=0;p.bat=100;p.sup=0;p.on=false;p.revs=0;p.drag=0;if(p.rd&&p.id!=gid)[p.x,p.y]=tc(pick(([x,y])=>Math.hypot(x*T+T/2-gx,y*T+T/2-gy)>260))}
@@ -211,19 +219,27 @@ function end(m,k){ // k: h hunters win the round, g ghost wins the round, x canc
  setTimeout(()=>{if(ph!='over')return;if(done)awards();else begin()},done?6000:8000)}
 
 function snap(){
- if(!R)return;const g=R.g,all=ph!='play',L=hunters().map(h=>[h.id,h.x|0,h.y|0,+h.ang.toFixed(2),h.on?1:0,h.down?1:0,+h.rev.toFixed(2),Math.round(h.bat),+Math.max(0,h.sup||0).toFixed(1)]);
+ if(!R)return;const g=R.g,all=ph!='play',L=hunters().map(h=>[h.id,h.x|0,h.y|0,+h.ang.toFixed(2),h.on?1:0,h.down?1:0,+h.rev.toFixed(2),Math.round(h.bat),+Math.max(0,h.sup||0).toFixed(1),h.in&&h.in.on&&h.bat<=0?1:0]);
  for(const p of P.values()){
   if(p.away)continue;
   const isG=p.id==R.gid,ob=isG||!p.rd||all,d=ob?9999:dist(p,g);
   // the ghost's position is only sent when this player is allowed to see it
   send(p,{t:'s',ph,role:isG?'ghost':p.rd?'hunter':'spec',hs:L,g:(ob||g.lit>0||g.vis>0)?[g.x|0,g.y|0]:null,
-   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,gid:R.gid,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
+   hp:g.hp,mx:g.max,time:R.time,bat:p.bat,gid:R.gid,pk:R.pk,sc:[M.g,M.h,M.t],lt:R.lt?[R.lt.s,+R.lt.t.toFixed(2)]:null,st:g.stun>0?1:0,al:R.al?[R.al.n,+R.al.t.toFixed(1)]:null,ring:R.ring,mc:R.mcs.map(m=>[+m.t.toFixed(2),m.c]),mb:R.mb.map(b=>[b.x,b.y,+b.t.toFixed(2)]),ch:g.charge,dc:g.dcd,near:p.down?0:d<80?2:d<150?1:0})}}
 
 setInterval(()=>{
  if(ph!='play')return;
  const dt=1/30,g=R.g,gp=P.get(R.gid),hs=hunters();
  if(!gp)return end('The ghost left: round cancelled','x');
- R.time-=dt;R.ring=Math.max(0,R.ring-dt);if(R.al&&(R.al.t-=dt)<=0)R.al=null;
+ R.time-=dt;R.ring=Math.max(0,R.ring-dt);
+ // magic circles: after MCT seconds every hunter standing inside one (with a clear line to its centre) loses all battery
+ for(const m of R.mcs)m.t+=dt;
+ for(let i=R.mcs.length-1;i>=0;i--){const m=R.mcs[i];if(m.t<MCT)continue;R.mcs.splice(i,1);
+  for(const h of hs)if(!h.down&&m.c.some(([x,y])=>dist(h,{x,y})<=MCR&&losW(x,y,h.x,h.y))){h.bat=0;h.sup=0;h.on=false}
+  R.pk=R.pk.filter(q=>q.s||!m.c.some(([x,y])=>dist(q,{x,y})<=MCR));
+  for(const[x,y]of m.c)R.mb.push({x,y,t:.7})}
+ R.mb=R.mb.filter(b=>(b.t-=dt)>0);
+if(R.al&&(R.al.t-=dt)<=0)R.al=null;
  // lightning: 1.5s of flickering windows as a warning, then 1.2s of light through that side's windows
  if(R.lt){R.lt.t+=dt;
   if(R.lt.t>=1.5&&R.lt.t<2.7&&!R.lt.hit&&inStrip(R.lt.s,g)){R.lt.hit=1;g.vis=Math.max(g.vis,4)} // lightning reveals the ghost to every hunter for 4s (no stun)
@@ -240,8 +256,8 @@ setInterval(()=>{
  if(!R.pk.some(q=>q.s)&&!hs.some(h=>h.sup>0)){R.sp-=dt;if(R.sp<=0){R.sp=40+Math.random()*30;const[x,y]=tc(pick(()=>true));R.pk.push({x,y,s:1})}}
  g.stun=Math.max(0,g.stun-dt);g.vis=Math.max(0,g.vis-dt);g.fcd=Math.max(0,g.fcd-dt);
  const ip=g.stun>0?{kx:0,ky:0,dash:0,ch:0}:gp.in;if(g.stun>0)g.charge=0;g.dash=Math.max(0,g.dash-dt);g.dcd=Math.max(0,g.dcd-dt);
- if(ip.ch)g.charge=Math.min(1,g.charge+dt/2.5);
- else{if(g.charge>=1){hs.forEach(h=>{h.bat=0;h.sup=0;h.on=false});R.pk=R.pk.filter(q=>q.s);R.ring=.6}g.charge=0}
+ if(ip.ch)g.charge=Math.min(1,g.charge+dt/10);
+ else{if(g.charge>=1)castMagic(hs,g);g.charge=0}
  if(ip.dash&&g.dcd<=0&&!ip.ch){g.dash=.25;g.dcd=2}
  const l=Math.hypot(ip.kx,ip.ky)||1,sp=115*(ip.ch?.45:1)*(g.dash>0?2.6:1);
  const gx0=g.x,gy0=g.y;move(g,ip.kx/l*sp*dt,ip.ky/l*sp*dt);
@@ -251,7 +267,7 @@ setInterval(()=>{
  let n=0,ne=0,chg=false;const hb=[];
  for(const h of hs){if(!h.on||h.down)continue;
   if(hit(h,g)){n++;hb.push(h);ne+=wt(h)}
-  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/10*(h.sup>0?1.25:1);o.rbeam=1;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);o.drag=0;chg=true;h.revs++;h.st.rv++}}}
+  for(const o of hs)if(o.down&&hit(h,o)){o.rev+=dt/10*(h.sup>0?1.25:1);o.rbeam=1;if(o.rev>=1){o.down=false;o.rev=0;o.bat=Math.max(o.bat,40);o.drag=0;h.revs++;h.st.rv++}}}
  if(n){const dm=6*Math.pow(ne,.75)*dt;g.hp-=dm;for(const h of hb)h.st.dmg+=dm*wt(h)/ne;g.lit=.25;if(g.fcd<=0){g.stun=Math.max(g.stun,Math.min(1.2,.5+.15*n));g.fcd=3.5}}else g.lit=Math.max(0,g.lit-dt);
  for(const h of hs)if(!h.down&&dist(h,g)<19){h.down=true;h.on=false;h.rev=0;h.drag=2.5;h.dragd=192;chg=true;h.st.fa++}
  if(chg)R.al={n:hs.filter(h=>!h.down).length,t:3};
