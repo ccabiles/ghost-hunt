@@ -375,6 +375,8 @@ addEventListener('keydown',e=>{if((e.key=='m'||e.key=='M')&&ph=='play'&&me&&!e.r
 (()=>{const sp=$('splash'),im=$('splimg'),close=()=>{sp.style.display='none'};
  sp.onclick=close;sp.onkeydown=e=>{if(e.key=='Enter'||e.key==' '){e.preventDefault();close()}};sp.focus();
  fetch('/api/splash').then(r=>r.json()).then(l=>{
+  // upright phones get the tall 'portrait-' pictures, everything else the wide ones
+  const pt=innerHeight>innerWidth,tall=l.filter(f=>/^portrait-/.test(f)),wide=l.filter(f=>!/^portrait-/.test(f));l=pt&&tall.length?tall:wide.length?wide:l;
   if(!l.length)return close();
   let last=-1;try{last=+localStorage.getItem('gh_splash')}catch(e){}
   let i=Math.random()*l.length|0;if(l.length>1&&i==last)i=(i+1)%l.length;

@@ -155,7 +155,7 @@ const SUPT=30,sk=h=>h.sup>0?1.3:1,wt=h=>pw(h)*(h.sup>0?1.25:1);
 const hit=(h,o)=>{const dx=o.x-h.x,dy=o.y-h.y,d=Math.hypot(dx,dy);if(d>RANGE*pw(h)*sk(h))return false;if(d<14)return true;
  return Math.abs(angd(Math.atan2(dy,dx),h.ang))<HALF*sk(h)&&los(h.x,h.y,o.x,o.y)};
 
-const P=new Map();let lastK='',nid=1,ph='lobby',R=null,lastG=0,msg='',bo=5,awardId=0,gm='c',rn=5; // gm: 'r' = random turns as the ghost, 'c' = players choose their role
+const P=new Map();let lastK='',nid=1,ph='lobby',R=null,lastG=0,msg='',bo=5,awardId=0,gm='r',rn=5; // gm: 'r' = random turns as the ghost, 'c' = players choose their role
 
 // match score: g = rounds won by the ghost, h = rounds won by the hunters, t = rounds needed to win the match
 let M={g:0,h:0,t:3,fin:'',last:'',aw:null};
@@ -312,5 +312,6 @@ wss.on('connection',ws=>{
   else if(p&&m.t=='back'&&ph=='awards'&&!p.away){p.away=true;if([...P.values()].every(q=>q.away))toLobby('');else lobby()}
   else if(p&&m.t=='start'&&ph=='lobby'&&p.id==hostId())startMatch()});
  ws.on('close',()=>{if(!p)return;P.delete(p.id);
+  if(!P.size){gm='r';rn=5;bo=5;if(ph!='lobby'){ph='lobby';R=null;msg=''}return} // everyone left: the next group starts fresh in Mode 1
   if(ph=='play'&&(p.id==R.gid||!hunters().length))end('A player left: round cancelled','x');else if(ph=='awards'&&[...P.values()].every(q=>q.away))toLobby('');else lobby()})});
 srv.listen(PORT,()=>console.log('Ghost Hunt running on port '+PORT));
